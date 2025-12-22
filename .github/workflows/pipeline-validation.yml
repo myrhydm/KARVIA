@@ -1,0 +1,130 @@
+name: Pipeline JSON Validation
+on:
+  pull_request:
+    paths:
+      - 'logs/pipeline/*.json'
+  push:
+    branches: [main]
+    paths:
+      - 'logs/pipeline/*.json'
+
+jobs:
+  validate-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y jq
+          npm install -g ajv-cli
+
+      - name: Validate JSON Schema
+        run: |
+          echo "🔍 Validating pipeline JSON files against schema..."
+          
+          SCHEMA_FILE="logs/pipeline/schema.json"
+          if [ ! -f "$SCHEMA_FILE" ]; then
+            echo "❌ Schema file not found: $SCHEMA_FILE"
+            exit 1
+          fi
+          
+          # Validate each pipeline JSON file
+          ERROR_COUNT=0
+          for file in logs/pipeline/FT-*.json logs/pipeline/BUG-*.json logs/pipeline/TASK-*.json; do
+            if [ -f "$file" ]; then
+              echo "Validating $file..."
+              if ! ajv validate -s "$SCHEMA_FILE" -d "$file"; then
+                echo "❌ Schema validation failed for $file"
+                ERROR_COUNT=$((ERROR_COUNT + 1))
+              else
+                echo "✅ Schema validation passed for $file"
+              fi
+            fi
+          done
+          
+          if [ $ERROR_COUNT -gt 0 ]; then
+            echo "❌ $ERROR_COUNT files failed schema validation"
+            exit 1
+          fi
+          
+          echo "✅ All pipeline files passed schema validation"
+
+      - name: Validate Stage History Rules
+        run: |
+          echo "🔍 Validating stage history business rules..."
+          
+          ERROR_COUNT=0
+          for file in logs/pipeline/FT-*.json logs/pipeline/BUG-*.json logs/pipeline/TASK-*.json; do
+            if [ -f "$file" ]; then
+              echo "Checking stage rules for $file..."
+              
+              # Check exactly one open stage
+              OPEN_STAGES=$(jq '[.stageHistory[] | select(.completedAt==null)] | length' "$file")
+              if [ "$OPEN_STAGES" -ne 1 ]; then
+                echo "❌ $file: Must have exactly 1 open stage (found: $OPEN_STAGES)"
+                ERROR_COUNT=$((ERROR_COUNT + 1))
+              fi
+              
+              # Check current stage matches open stage
+              CURRENT_STAGE=$(jq -r '.currentStage' "$file")
+              OPEN_STAGE=$(jq -r '[.stageHistory[] | select(.completedAt==null)] | .[0].stage' "$file")
+              if [ "$CURRENT_STAGE" != "$OPEN_STAGE" ]; then
+                echo "❌ $file: currentStage ($CURRENT_STAGE) must match open stage ($OPEN_STAGE)"
+                ERROR_COUNT=$((ERROR_COUNT + 1))
+              fi
+              
+              # Check timestamps are in chronological order
+              if ! jq -e '.stageHistory | map(.startedAt) | . == sort' "$file" > /dev/null; then
+                echo "❌ $file: Stage history timestamps must be chronological"
+                ERROR_COUNT=$((ERROR_COUNT + 1))
+              fi
+              
+              # Check blocked state consistency
+              BLOCKED=$(jq -r '.blocked' "$file")
+              BLOCKED_STAGES=$(jq '[.stageHistory[] | select(.status=="blocked")] | length' "$file")
+              if [ "$BLOCKED" = "true" ] && [ "$BLOCKED_STAGES" -eq 0 ]; then
+                echo "⚠️  $file: blocked=true but no blocked stages in history"
+              fi
+              
+              echo "✅ Stage rules passed for $file"
+            fi
+          done
+          
+          if [ $ERROR_COUNT -gt 0 ]; then
+            echo "❌ $ERROR_COUNT files failed stage validation"
+            exit 1
+          fi
+          
+          echo "✅ All pipeline files passed stage validation"
+
+      - name: Generate Validation Report
+        if: always()
+        run: |
+          echo "📊 Pipeline Validation Summary" > pipeline-validation-report.md
+          echo "============================" >> pipeline-validation-report.md
+          echo "" >> pipeline-validation-report.md
+          
+          # Count files by type
+          FT_COUNT=$(ls logs/pipeline/FT-*.json 2>/dev/null | wc -l || echo 0)
+          BUG_COUNT=$(ls logs/pipeline/BUG-*.json 2>/dev/null | wc -l || echo 0)
+          TASK_COUNT=$(ls logs/pipeline/TASK-*.json 2>/dev/null | wc -l || echo 0)
+          
+          echo "**Files Validated:**" >> pipeline-validation-report.md
+          echo "- Features: $FT_COUNT" >> pipeline-validation-report.md
+          echo "- Bugs: $BUG_COUNT" >> pipeline-validation-report.md
+          echo "- Tasks: $TASK_COUNT" >> pipeline-validation-report.md
+          echo "" >> pipeline-validation-report.md
+          
+          # Stage distribution
+          echo "**Current Stage Distribution:**" >> pipeline-validation-report.md
+          if [ $FT_COUNT -gt 0 ] || [ $BUG_COUNT -gt 0 ] || [ $TASK_COUNT -gt 0 ]; then
+            jq -r '.currentStage' logs/pipeline/*.json 2>/dev/null | sort | uniq -c | while read count stage; do
+              echo "- $stage: $count" >> pipeline-validation-report.md
+            done
+          else
+            echo "- No pipeline files found" >> pipeline-validation-report.md
+          fi
+          
+          cat pipeline-validation-report.md

@@ -1,0 +1,70 @@
+name: Health Check Monitoring
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Every 15 minutes
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y jq curl
+
+      - name: Check Service Health
+        run: |
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%S.%03NZ")
+          SERVICE_NAME="goaltracker-integration-hub"
+          
+          # Replace with your actual Render service URL
+          HEALTH_URL="https://goaltracker-integration-hub.onrender.com/health"
+          
+          # Perform health check
+          if curl -f -s --max-time 10 "$HEALTH_URL" > /dev/null 2>&1; then
+            STATUS="healthy"
+            RESPONSE_CODE=$(curl -o /dev/null -s -w "%{http_code}" --max-time 10 "$HEALTH_URL")
+            echo "✅ Health check passed - HTTP $RESPONSE_CODE"
+          else
+            STATUS="unhealthy"
+            RESPONSE_CODE=$(curl -o /dev/null -s -w "%{http_code}" --max-time 10 "$HEALTH_URL" || echo "000")
+            echo "❌ Health check failed - HTTP $RESPONSE_CODE"
+          fi
+          
+          # Create health check log entry
+          HEALTH_ENTRY=$(jq -n \
+            --arg timestamp "$TIMESTAMP" \
+            --arg service "$SERVICE_NAME" \
+            --arg status "$STATUS" \
+            --arg url "$HEALTH_URL" \
+            --arg response_code "$RESPONSE_CODE" \
+            --arg commit "${{ github.sha }}" \
+            '{
+              timestamp: $timestamp,
+              service: $service,
+              status: $status,
+              url: $url,
+              response_code: $response_code,
+              commit: $commit,
+              workflow_run: "${{ github.run_id }}"
+            }')
+          
+          # Append to health checks log
+          echo "$HEALTH_ENTRY" >> logs/health-checks.jsonl
+          
+          # Fail the job if unhealthy (optional - remove if you don't want alerts)
+          if [ "$STATUS" = "unhealthy" ]; then
+            echo "::error::Service $SERVICE_NAME is unhealthy"
+            exit 1
+          fi
+
+      - name: Commit Health Check Results
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add logs/health-checks.jsonl
+          git commit -m "Health check: $(date -u +%Y-%m-%d-%H:%M) [skip deploy]" || echo "No health check changes"
+          git push

@@ -1,0 +1,633 @@
+[
+  {
+    "id": "vision",
+    "title": "🎭 Your Vision",
+    "subtitle": "Let's explore what drives you forward",
+    "context": "Your vision is the foundation of everything. The clearer and more compelling it is, the more likely you are to achieve it. Take your time here - this shapes everything else.",
+    "fields": [
+      {
+        "type": "textarea",
+        "id": "dream",
+        "label": "What's your dream?",
+        "context": "Paint a vivid picture of your ideal future. Be specific about what success looks, feels, and sounds like. The more detailed, the better.",
+        "placeholder": "Example: I'm leading a team of 10 engineers at a top tech company, building products used by millions. I wake up excited about work, feel valued for my expertise, and have the financial freedom to travel with my family twice a year.",
+        "required": true
+      },
+      {
+        "type": "textarea",
+        "id": "why",
+        "label": "Why this, why now?",
+        "context": "Your 'why' is your fuel when things get tough. Dig deep - what emotions, values, or life experiences drive this goal?",
+        "placeholder": "Example: I want to prove to myself I can achieve something ambitious after feeling stuck in my current role. I want my kids to see that big dreams are possible, and I crave the intellectual challenge of solving complex problems.",
+        "required": true
+      },
+      {
+        "type": "single-choice",
+        "id": "importance",
+        "label": "How important is this?",
+        "context": "Be honest about your current emotional investment. This helps us calibrate the right approach for you.",
+        "options": [
+          {
+            "value": "curious",
+            "label": "Curious",
+            "icon": "🤔",
+            "description": "I'm exploring this idea, seeing if it resonates"
+          },
+          {
+            "value": "interested",
+            "label": "Interested",
+            "icon": "👀",
+            "description": "This sounds appealing, I'd like to learn more"
+          },
+          {
+            "value": "committed",
+            "label": "Committed",
+            "icon": "💪",
+            "description": "I'm ready to put in serious effort to make this happen"
+          },
+          {
+            "value": "obsessed",
+            "label": "Obsessed",
+            "icon": "🔥",
+            "description": "This is my #1 priority, I think about it constantly"
+          }
+        ],
+        "required": true
+      },
+      {
+        "type": "single-choice",
+        "id": "timeline",
+        "label": "Timeline?",
+        "context": "Different goals need different approaches. Short sprints require intensity, while long journeys need sustainability.",
+        "options": [
+          {
+            "value": "sprint",
+            "label": "Sprint (1-3 months)",
+            "icon": "⚡",
+            "description": "Quick wins, immediate results, high intensity"
+          },
+          {
+            "value": "marathon",
+            "label": "Marathon (6-12 months)",
+            "icon": "🏃",
+            "description": "Steady progress, building momentum, balanced effort"
+          },
+          {
+            "value": "mountain",
+            "label": "Mountain (1+ years)",
+            "icon": "🏔️",
+            "description": "Long-term vision, patience required, multiple phases"
+          }
+        ],
+        "required": true
+      }
+    ]
+  },
+  {
+    "id": "style",
+    "title": "💪 Your Style",
+    "subtitle": "How do you work best?",
+    "context": "Understanding your natural work patterns helps us design a plan that actually works with your life, not against it.",
+    "fields": [
+      {
+        "type": "single-choice",
+        "id": "timeCommitment",
+        "label": "Time commitment?",
+        "context": "Be realistic about your current life situation. It's better to consistently do less than to plan for more and give up.",
+        "options": [
+          {
+            "value": "micro",
+            "label": "Micro Bursts",
+            "icon": "⚡",
+            "description": "15-30 minutes at a time, perfect for busy schedules"
+          },
+          {
+            "value": "focused",
+            "label": "Focused Blocks",
+            "icon": "🎯",
+            "description": "1-2 hour dedicated sessions, deep work mode"
+          },
+          {
+            "value": "flexible",
+            "label": "Flexible Flow",
+            "icon": "🌊",
+            "description": "Variable time blocks, adapting to daily energy and schedule"
+          }
+        ],
+        "required": true
+      },
+      {
+        "type": "multi-choice",
+        "id": "workTraits",
+        "label": "Work traits? (Select all that apply)",
+        "context": "These patterns shape when and how you'll be most productive. Choose what naturally describes you.",
+        "options": [
+          {
+            "value": "morning",
+            "label": "Morning Person",
+            "icon": "🌅",
+            "description": "Peak energy 6-10am"
+          },
+          {
+            "value": "night",
+            "label": "Night Owl",
+            "icon": "🌙",
+            "description": "Peak energy 8pm-12am"
+          },
+          {
+            "value": "routine",
+            "label": "Routine Lover",
+            "icon": "📅",
+            "description": "Thrive with consistent schedules"
+          },
+          {
+            "value": "spontaneous",
+            "label": "Spontaneous",
+            "icon": "🎲",
+            "description": "Work best with variety and flexibility"
+          },
+          {
+            "value": "social",
+            "label": "Social Worker",
+            "icon": "👥",
+            "description": "More productive around others"
+          },
+          {
+            "value": "solo",
+            "label": "Solo Player",
+            "icon": "🏠",
+            "description": "Focus best when alone"
+          },
+          {
+            "value": "perfectionist",
+            "label": "Perfectionist",
+            "icon": "✨",
+            "description": "High standards, attention to detail"
+          },
+          {
+            "value": "pragmatic",
+            "label": "Pragmatic",
+            "icon": "🔧",
+            "description": "Focus on 'good enough' and progress"
+          }
+        ]
+      },
+      {
+        "type": "single-choice",
+        "id": "intensity",
+        "label": "Intensity level?",
+        "context": "Your natural intensity level affects how we structure your journey. Work with your energy, not against it.",
+        "options": [
+          {
+            "value": "zen",
+            "label": "Zen",
+            "icon": "🧘",
+            "description": "Calm, steady, sustainable pace"
+          },
+          {
+            "value": "balanced",
+            "label": "Balanced",
+            "icon": "⚖️",
+            "description": "Mix of intensity and rest periods"
+          },
+          {
+            "value": "high",
+            "label": "High Octane",
+            "icon": "🚀",
+            "description": "Fast-paced, energetic, ambitious goals"
+          },
+          {
+            "value": "beast",
+            "label": "Beast Mode",
+            "icon": "🦁",
+            "description": "All-in, maximum effort, competitive drive"
+          }
+        ],
+        "required": true
+      },
+      {
+        "type": "single-choice",
+        "id": "learningStyle",
+        "label": "Learning style?",
+        "context": "How do you best acquire new skills and knowledge? This shapes the resources and approaches we recommend.",
+        "options": [
+          {
+            "value": "handson",
+            "label": "Hands-on",
+            "icon": "🛠️",
+            "description": "Learn by doing, building, experimenting"
+          },
+          {
+            "value": "research",
+            "label": "Research",
+            "icon": "📚",
+            "description": "Study first, then apply - love courses and books"
+          },
+          {
+            "value": "community",
+            "label": "Community",
+            "icon": "🤝",
+            "description": "Learn through discussion, mentorship, groups"
+          },
+          {
+            "value": "structured",
+            "label": "Structured",
+            "icon": "📋",
+            "description": "Clear curriculum, step-by-step programs"
+          }
+        ],
+        "required": true
+      }
+    ]
+  },
+  {
+    "id": "foundation",
+    "title": "🏗️ Your Foundation",
+    "subtitle": "What's your starting point?",
+    "context": "Understanding where you're starting from helps us build the right bridge to where you want to go. Be honest about your current situation.",
+    "fields": [
+      {
+        "type": "single-choice",
+        "id": "readiness",
+        "label": "Readiness level?",
+        "context": "Where are you emotionally and practically right now? This determines the pace and approach we'll recommend.",
+        "options": [
+          {
+            "value": "exploring",
+            "label": "Exploring",
+            "icon": "🔍",
+            "description": "Still figuring things out, want to learn more"
+          },
+          {
+            "value": "ready",
+            "label": "Ready",
+            "icon": "✅",
+            "description": "Decided to pursue this, ready to start planning"
+          },
+          {
+            "value": "unstoppable",
+            "label": "Unstoppable",
+            "icon": "🚀",
+            "description": "Fully committed, ready to take massive action now"
+          }
+        ],
+        "required": true
+      },
+      {
+        "type": "textarea",
+        "id": "whySucceed",
+        "label": "Why can you succeed?",
+        "context": "This isn't bragging - it's identifying your real advantages. What unique combination of skills, experiences, or traits do you have?",
+        "placeholder": "Example: I have 5 years of customer-facing experience so I understand user needs deeply. I'm naturally curious and great at breaking down complex problems. I've successfully learned new skills before (taught myself guitar, completed a marathon). My network includes several engineers who could mentor me.",
+        "required": true
+      },
+      {
+        "type": "textarea",
+        "id": "pastLessons",
+        "label": "Past lessons? (Optional)",
+        "context": "Previous attempts (successful or not) are valuable data. What patterns have you noticed about how you work best or what trips you up?",
+        "placeholder": "Example: I've tried coding bootcamps before but struggled with the pace. I learned I need more time to practice concepts before moving on. I'm better with project-based learning than abstract theory. I tend to give up when I don't see progress quickly, so I need to celebrate small wins."
+      }
+    ]
+  },
+  {
+    "id": "knowledge",
+    "title": "🧠 Knowledge & Experience",
+    "subtitle": "What do you know and what have you done?",
+    "context": "Honest self-assessment here is crucial. Overestimating leads to frustration, underestimating misses opportunities. Rate yourself compared to others pursuing similar goals.",
+    "fields": [
+      {
+        "type": "likert",
+        "id": "industryTrends",
+        "label": "Industry trends",
+        "context": "Do you understand what's happening in your target field? New technologies, market shifts, key players, hot topics?",
+        "labels": [
+          "No clue what's trending",
+          "Heard some buzzwords",
+          "Follow industry news",
+          "Active in communities",
+          "Thought leader level"
+        ]
+      },
+      {
+        "type": "likert",
+        "id": "competitive",
+        "label": "Competitive landscape",
+        "context": "Who are the major companies, products, or players in your target space? What makes them successful?",
+        "labels": [
+          "Don't know the players",
+          "Know big names only",
+          "Understand main players",
+          "Know strengths/weaknesses",
+          "Could analyze any competitor"
+        ]
+      },
+      {
+        "type": "likert",
+        "id": "businessModels",
+        "label": "Business models",
+        "context": "How do companies in your target field actually make money? What are different approaches to generating revenue?",
+        "labels": [
+          "No business knowledge",
+          "Basic understanding",
+          "Know common models",
+          "Understand nuances",
+          "Could design business model"
+        ]
+      },
+      {
+        "type": "textarea",
+        "id": "realImpact",
+        "label": "Real impact?",
+        "context": "Focus on results you personally drove, not team achievements. Use numbers where possible. What did you build, ship, or accomplish that created measurable value?",
+        "placeholder": "Example: Led redesign of checkout flow that increased conversion by 15% over 6 months. Managed budget of $500K and team of 3 contractors. Built internal tool used by 50+ customer service reps daily. Personally closed $2M in sales through relationship-building with 3 key enterprise clients.",
+        "required": true
+      },
+      {
+        "type": "single-choice",
+        "id": "decisionLevel",
+        "label": "Decision level?",
+        "context": "What's the highest level of responsibility you've had? This impacts the types of opportunities you're ready for.",
+        "options": [
+          {
+            "value": "execution",
+            "label": "Execution",
+            "icon": "⚡",
+            "description": "Follow detailed instructions, implement others' plans"
+          },
+          {
+            "value": "tactical",
+            "label": "Tactical",
+            "icon": "🎯",
+            "description": "Make decisions about how to achieve given goals"
+          },
+          {
+            "value": "strategic",
+            "label": "Strategic",
+            "icon": "🧭",
+            "description": "Set goals and direction for projects or teams"
+          },
+          {
+            "value": "ownership",
+            "label": "Ownership",
+            "icon": "👑",
+            "description": "Full responsibility for outcomes, P&L, vision"
+          }
+        ],
+        "required": true
+      }
+    ]
+  },
+  {
+    "id": "assets",
+    "title": "💎 Hidden Assets",
+    "subtitle": "What unique value do you bring?",
+    "context": "These 'soft' assets are often more valuable than credentials. They're what make you memorable and create opportunities.",
+    "fields": [
+      {
+        "type": "multi-choice",
+        "id": "uniqueValue",
+        "label": "Unique value? (Select all that apply)",
+        "context": "What makes you different from others pursuing similar goals? Your unique combination is your competitive advantage.",
+        "options": [
+          {
+            "value": "rare",
+            "label": "Rare Combo",
+            "icon": "💎",
+            "description": "Unusual mix of skills/backgrounds"
+          },
+          {
+            "value": "expert",
+            "label": "Domain Expert",
+            "icon": "🎓",
+            "description": "Deep knowledge in specific area"
+          },
+          {
+            "value": "network",
+            "label": "Strong Network",
+            "icon": "🕸️",
+            "description": "Know key people in the field"
+          },
+          {
+            "value": "speed",
+            "label": "Speed",
+            "icon": "⚡",
+            "description": "Learn and execute faster than others"
+          },
+          {
+            "value": "bridge",
+            "label": "Culture Bridge",
+            "icon": "🌉",
+            "description": "Connect different communities/perspectives"
+          },
+          {
+            "value": "spotter",
+            "label": "Problem Spotter",
+            "icon": "🔍",
+            "description": "See opportunities others miss"
+          }
+        ]
+      },
+      {
+        "type": "textarea",
+        "id": "deepMotivation",
+        "label": "Deep motivation?",
+        "context": "Beyond the obvious reasons, what really drives you? Understanding this helps during tough times when surface motivations aren't enough.",
+        "placeholder": "Example: I grew up seeing my parents struggle financially despite working hard. I want to prove that with the right strategy and skills, you can break out of that cycle. I also love the feeling of building something from nothing - it's like creating magic.",
+        "required": true
+      },
+      {
+        "type": "likert",
+        "id": "startingProjects",
+        "label": "Starting projects",
+        "context": "How are you at beginning new initiatives? This affects which opportunities you should pursue first.",
+        "labels": [
+          "Never finish what I start",
+          "Struggle with beginnings",
+          "Decent at starting",
+          "Usually complete projects",
+          "Serial project launcher"
+        ]
+      },
+      {
+        "type": "likert",
+        "id": "handlingObstacles",
+        "label": "Handling obstacles",
+        "context": "Every goal hits roadblocks. How do you typically respond when things get difficult or don't go as planned?",
+        "labels": [
+          "Quit at first setback",
+          "Get discouraged easily",
+          "Push through eventually",
+          "Find creative solutions",
+          "Obstacles energize me"
+        ]
+      },
+      {
+        "type": "single-choice",
+        "id": "riskTolerance",
+        "label": "Risk tolerance?",
+        "context": "Your comfort with uncertainty affects which paths and timelines make sense for you. There's no wrong answer here.",
+        "options": [
+          {
+            "value": "avoider",
+            "label": "Risk Avoider",
+            "icon": "🛡️",
+            "description": "Prefer guaranteed outcomes, detailed plans"
+          },
+          {
+            "value": "calculated",
+            "label": "Calculated",
+            "icon": "📊",
+            "description": "Analyze risks, take smart bets"
+          },
+          {
+            "value": "comfortable",
+            "label": "Comfortable",
+            "icon": "😌",
+            "description": "See uncertainty as normal part of growth"
+          },
+          {
+            "value": "seeker",
+            "label": "Risk Seeker",
+            "icon": "🎲",
+            "description": "Energized by uncertainty and big swings"
+          }
+        ],
+        "required": true
+      }
+    ]
+  },
+  {
+    "id": "reality",
+    "title": "🌍 Reality Check",
+    "subtitle": "Let's get real about your situation",
+    "context": "This is where dreams meet reality. Being honest here prevents you from setting plans that are doomed to fail. We'll work with your real constraints, not fantasy ones.",
+    "fields": [
+      {
+        "type": "textarea",
+        "id": "timeReality",
+        "label": "Time reality?",
+        "context": "Look at your actual calendar for the past week. When could you realistically work on this? Be specific about days, times, and how long you can sustain it.",
+        "placeholder": "Example: Realistically, I have Tuesday/Thursday evenings 8-10pm after kids are in bed, and Saturday mornings 7-9am before family wakes up. I could maybe squeeze in 30 minutes during lunch breaks 2-3 times per week, but that's not guaranteed with my current workload.",
+        "required": true
+      },
+      {
+        "type": "single-choice",
+        "id": "financial",
+        "label": "Financial constraints?",
+        "context": "This affects which resources (courses, tools, events) you can access and how quickly you need to see returns on your investment.",
+        "options": [
+          {
+            "value": "tight",
+            "label": "Tight",
+            "icon": "💸",
+            "description": "Every dollar counts, need free/low-cost options"
+          },
+          {
+            "value": "limited",
+            "label": "Limited",
+            "icon": "💰",
+            "description": "Can invest $50-200/month in growth"
+          },
+          {
+            "value": "moderate",
+            "label": "Moderate",
+            "icon": "💳",
+            "description": "Can invest $200-500/month comfortably"
+          },
+          {
+            "value": "flexible",
+            "label": "Flexible",
+            "icon": "💎",
+            "description": "Money isn't the limiting factor"
+          }
+        ],
+        "required": true
+      },
+      {
+        "type": "multi-choice",
+        "id": "support",
+        "label": "Support system? (Select all that apply)",
+        "context": "Who can help you stay accountable, provide advice, or just understand why this matters to you? Support systems dramatically increase success rates.",
+        "options": [
+          {
+            "value": "family",
+            "label": "Family",
+            "icon": "👨‍👩‍👧‍👦",
+            "description": "Spouse/family understand and support your goals"
+          },
+          {
+            "value": "friends",
+            "label": "Friends",
+            "icon": "👥",
+            "description": "Friends who encourage your ambitions"
+          },
+          {
+            "value": "mentors",
+            "label": "Mentors",
+            "icon": "🧙",
+            "description": "People ahead of you willing to guide"
+          },
+          {
+            "value": "peers",
+            "label": "Peers",
+            "icon": "🤝",
+            "description": "Others pursuing similar goals"
+          },
+          {
+            "value": "professional",
+            "label": "Professional",
+            "icon": "💼",
+            "description": "Coaches, advisors, paid support"
+          },
+          {
+            "value": "solo",
+            "label": "Going Solo",
+            "icon": "🏠",
+            "description": "Prefer to figure it out independently"
+          }
+        ]
+      },
+      {
+        "type": "textarea",
+        "id": "selfDoubt",
+        "label": "Self-doubt?",
+        "context": "Everyone has these thoughts. Naming them reduces their power and helps us address them directly. What's the voice in your head saying?",
+        "placeholder": "Example: I worry I'm too old to switch careers. What if I spend all this time and effort and still can't compete with people who have traditional backgrounds? My family thinks I'm crazy for wanting to leave a stable job. Maybe I'm just having a quarter-life crisis and should stick with what I know.",
+        "required": true
+      },
+      {
+        "type": "slider",
+        "id": "gutFeeling",
+        "label": "Gut feeling?",
+        "context": "Forget logic for a moment. When you imagine yourself achieving this goal, what does your intuition tell you? Trust that inner voice.",
+        "description": "How confident are you that this will work out?",
+        "min": 0,
+        "max": 100,
+        "default": 50
+      }
+    ]
+  },
+  {
+    "id": "belief",
+    "title": "🔢 Belief Level",
+    "subtitle": "How much do you believe this is possible?",
+    "context": "Your belief level is one of the strongest predictors of success. If it's low, that's valuable data - we need to build evidence and confidence before attempting big moves.",
+    "fields": [
+      {
+        "type": "belief-scale",
+        "id": "beliefLevel",
+        "label": "On a scale of 1-7, how strong is your belief that you can achieve this?",
+        "context": "1 = This feels impossible, 7 = I'm absolutely certain I can make this happen. Be honest - we can work on building belief if it's currently low.",
+        "required": true
+      },
+      {
+        "type": "textarea",
+        "id": "beliefHelp",
+        "label": "What would help you believe even more?",
+        "context": "What evidence, support, or experiences would increase your confidence? This helps us design early wins and build momentum.",
+        "placeholder": "Example: If I could find one person who made a similar transition and hear their story. If I could complete one small project successfully to prove I can do this. If I had a mentor who believes in me. If I could see a clear, step-by-step plan that others have followed."
+      }
+    ]
+  }
+]

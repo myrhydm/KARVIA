@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manifest Your Ambition</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation Bar -->
+    <nav class="glass-effect sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center relative">
+                <div class="flex items-center">
+                    <a href="home.html" class="flex items-center">
+                        <img src="assets/WhiteMetallic.png" alt="Karvia Logo" class="h-40 w-auto object-contain object-center" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
+                    </a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="home.html" class="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg border border-gray-200 hover:border-gray-300 text-sm font-medium transition-all duration-200">Dashboard</a>
+                    <a href="goals.html" class="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg border border-gray-200 hover:border-gray-300 text-sm font-medium transition-all duration-200">Plan Week</a>
+                    <a href="analysis.html" class="text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg border border-gray-200 hover:border-gray-300 text-sm font-medium transition-all duration-200">Analysis</a>
+                    <a href="manifest.html" class="text-white nav-brand px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200">Manifest</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <div class="main-container flex justify-center items-center min-h-screen pt-0">
+        <div class="card manifest-typeform" style="max-width: 640px; width: 100%; margin: 0 auto; position:relative;">
+            <h1 class="text-3xl font-bold text-indigo-700 mb-2 text-center">Manifest Your Ambition</h1>
+            <p class="text-indigo-600 italic mb-6 text-center" style="font-size:1.1rem;">"The future belongs to those who believe in the beauty of their dreams."</p>
+            <form id="manifest-form" class="manifest-form-typeform" autocomplete="off">
+                <div class="manifest-question-card">
+                    <div class="manifest-question-icon">🎯</div>
+                    <div class="manifest-typeform-label">1. What is your vision?</div>
+                    <div class="manifest-typeform-desc">Describe, in as much detail as possible, what you want to achieve. Imagine it's already true. What does your life look and feel like?</div>
+                    <textarea class="form-input manifest-typeform-input" id="vision" name="vision" rows="3" placeholder="E.g., I am thriving in my new role at a top company, feeling fulfilled and valued." required></textarea>
+                </div>
+                <div class="manifest-question-card">
+                    <div class="manifest-question-icon">❤️</div>
+                    <div class="manifest-typeform-label">2. Why do you want this?</div>
+                    <div class="manifest-typeform-desc">What deep desire or emotion drives you toward this goal? How will achieving this make you feel?</div>
+                    <textarea class="form-input manifest-typeform-input" id="why" name="why" rows="2" placeholder="E.g., To challenge myself, grow my skills, and open new opportunities..." required></textarea>
+                </div>
+                <div class="manifest-question-card">
+                    <div class="manifest-question-icon">💡</div>
+                    <div class="manifest-typeform-label">3. What is your intention?</div>
+                    <div class="manifest-typeform-desc">Write your intention in the present tense, as if it's already happening.<br><span class="text-xs text-indigo-500">E.g., "I am learning and applying RAG, growing every day, and attracting new career opportunities."</span></div>
+                    <textarea class="form-input manifest-typeform-input" id="intention" name="intention" rows="2" required></textarea>
+                </div>
+                <div class="manifest-question-card">
+                    <div class="manifest-question-icon">🔢</div>
+                    <div class="manifest-typeform-label">4. How much do you believe this is possible for you?</div>
+                    <div class="manifest-typeform-desc">On a scale of 1-7, how strong is your belief that you can achieve this? What would help you believe even more?</div>
+                    <div class="belief-circles" id="belief-circles"></div>
+                    <textarea class="form-input mt-2 manifest-typeform-input" id="belief_help" name="belief_help" rows="1" placeholder="E.g., If I had a mentor, or more time each week..."></textarea>
+                </div>
+                <div class="manifest-question-card">
+                    <div class="manifest-question-icon">📝</div>
+                    <div class="manifest-typeform-label">5. What actions will you take?</div>
+                    <div class="manifest-typeform-desc">List 1-3 concrete actions you will take this week to move closer to your vision.</div>
+                    <input type="text" class="form-input mb-2 manifest-typeform-input" name="action1" id="action1" placeholder="E.g., Complete a RAG course module" required>
+                    <input type="text" class="form-input mb-2 manifest-typeform-input" name="action2" id="action2" placeholder="E.g., Reach out to a mentor (optional)">
+                    <input type="text" class="form-input manifest-typeform-input" name="action3" id="action3" placeholder="E.g., Update my resume (optional)">
+                </div>
+                <div class="manifest-question-card">
+                    <div class="manifest-question-icon">🤝</div>
+                    <div class="manifest-typeform-label">6. How will you support yourself and stay accountable?</div>
+                    <div class="manifest-typeform-desc">Who or what can help you stay on track? (e.g., a friend, mentor, coach, or a daily check-in ritual)</div>
+                    <textarea class="form-input manifest-typeform-input" id="support" name="support" rows="2" placeholder="E.g., Weekly check-in with a friend, journaling, or using this app!" required></textarea>
+                </div>
+                <div class="manifest-question-card">
+                    <div class="manifest-question-icon">🎓</div>
+                    <div class="manifest-typeform-label">7. How do you prefer to learn?</div>
+                    <div class="manifest-typeform-desc">Select your preferred learning styles to get personalized resources and recommendations.</div>
+                    <div class="learning-preferences-grid">
+                        <label class="learning-preference-item">
+                            <input type="checkbox" name="learningPreferences" value="video" class="learning-checkbox">
+                            <div class="learning-card">
+                                <div class="learning-icon">🎥</div>
+                                <div class="learning-title">Video</div>
+                                <div class="learning-desc">Video tutorials, courses, and demonstrations</div>
+                            </div>
+                        </label>
+                        <label class="learning-preference-item">
+                            <input type="checkbox" name="learningPreferences" value="text" class="learning-checkbox">
+                            <div class="learning-card">
+                                <div class="learning-icon">📖</div>
+                                <div class="learning-title">Text</div>
+                                <div class="learning-desc">Articles, books, and written guides</div>
+                            </div>
+                        </label>
+                        <label class="learning-preference-item">
+                            <input type="checkbox" name="learningPreferences" value="audio" class="learning-checkbox">
+                            <div class="learning-card">
+                                <div class="learning-icon">🎧</div>
+                                <div class="learning-title">Audio</div>
+                                <div class="learning-desc">Podcasts, audiobooks, and discussions</div>
+                            </div>
+                        </label>
+                        <label class="learning-preference-item">
+                            <input type="checkbox" name="learningPreferences" value="interactive" class="learning-checkbox">
+                            <div class="learning-card">
+                                <div class="learning-icon">🖐️</div>
+                                <div class="learning-title">Interactive</div>
+                                <div class="learning-desc">Hands-on practice and experimentation</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div class="manifest-question-card">
+                    <div class="manifest-question-icon">🙏</div>
+                    <div class="manifest-typeform-label">8. How will you celebrate progress and practice gratitude?</div>
+                    <div class="manifest-typeform-desc">How will you acknowledge small wins and express gratitude for your journey?</div>
+                    <textarea class="form-input manifest-typeform-input" id="gratitude" name="gratitude" rows="2" placeholder="E.g., I will write down 3 things I'm grateful for each week and celebrate small wins with a treat." required></textarea>
+                </div>
+                <div class="flex justify-center mt-8">
+                    <button type="submit" class="btn btn-primary w-full" style="max-width: 320px;">Manifest My Plan</button>
+                </div>
+            </form>
+            <div id="manifest-progress-bar" class="manifest-progress-bar" style="margin-top:2.5rem;"></div>
+        </div>
+    </div>
+    <script src="pages/scripts/manifest.js"></script>
+</body>
+</html> 

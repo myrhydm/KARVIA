@@ -1,0 +1,137 @@
+name: Cross-Repo Feature Orchestration
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  orchestrate:
+    if: contains(github.event.label.name, 'needs-development')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y jq
+
+      - name: Create Pipeline State
+        run: |
+          FEATURE_ID="FT-$(printf '%03d' ${{ github.event.issue.number }})"
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%S.%03NZ")
+          
+          # Create pipeline JSON
+          cat > "logs/pipeline/$FEATURE_ID.json" <<EOF
+          {
+            "featureId": "$FEATURE_ID",
+            "title": "${{ github.event.issue.title }}",
+            "description": "Created from issue #${{ github.event.issue.number }}",
+            "currentStage": "development",
+            "createdAt": "$TIMESTAMP",
+            "lastUpdated": "$TIMESTAMP",
+            "crossRepoIssues": {
+              "goaltracker_test": ${{ github.event.issue.number }},
+              "iBrain": null,
+              "goal_tracking": null
+            },
+            "stageHistory": [
+              {
+                "stage": "development",
+                "startedAt": "$TIMESTAMP",
+                "completedAt": null,
+                "assignee": "Developer"
+              }
+            ],
+            "scope": {
+              "requiresiBrain": ${{ contains(github.event.issue.labels[*].name, 'scope:ibrain') }},
+              "requiresGoalTracking": ${{ contains(github.event.issue.labels[*].name, 'scope:goal-tracking') }},
+              "requiresIntegration": true
+            },
+            "priority": "medium",
+            "estimatedDays": 0,
+            "actualDays": 0,
+            "blockers": [],
+            "dependencies": [],
+            "notes": ["Auto-created from issue orchestration"]
+          }
+          EOF
+
+      - name: Create iBrain Tracking Issue
+        if: contains(github.event.issue.labels[*].name, 'scope:ibrain')
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.CROSS_REPO_TOKEN }}
+          script: |
+            try {
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: 'iBrain',
+                title: '[TRACKING] ${{ github.event.issue.title }}',
+                body: `## 🔗 Cross-Repo Feature Request
+
+**Original Issue**: ${{ github.event.issue.html_url }}
+**Feature ID**: FT-${{ github.event.issue.number }}
+
+### 📋 Requirements
+${{ github.event.issue.body }}
+
+### 🎯 iBrain Scope
+- [ ] Engine development required
+- [ ] API contract updates needed
+- [ ] Intelligence feature implementation
+
+**Current Stage**: Development
+**Dependencies**: See original issue`,
+                labels: ['tracking', 'cross-repo', 'development', 'intelligence']
+              });
+              
+              console.log('✅ Created iBrain tracking issue #' + issue.data.number);
+              
+            } catch (error) {
+              console.error('❌ Failed to create iBrain tracking issue:', error.message);
+              process.exit(1);
+            }
+
+      - name: Create Goal Tracking Issue
+        if: contains(github.event.issue.labels[*].name, 'scope:goal-tracking')
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.CROSS_REPO_TOKEN }}
+          script: |
+            try {
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: 'goal_tracking',
+                title: '[TRACKING] ${{ github.event.issue.title }}',
+                body: `## 🔗 Cross-Repo Feature Request
+
+**Original Issue**: ${{ github.event.issue.html_url }}
+**Feature ID**: FT-${{ github.event.issue.number }}
+
+### 📋 Requirements
+${{ github.event.issue.body }}
+
+### 🎯 Goal Tracking Scope
+- [ ] Frontend implementation required
+- [ ] Backend API updates needed
+- [ ] User experience features
+
+**Current Stage**: Development
+**Dependencies**: See original issue`,
+                labels: ['tracking', 'cross-repo', 'development', 'frontend']
+              });
+              
+              console.log('✅ Created Goal Tracking issue #' + issue.data.number);
+              
+            } catch (error) {
+              console.error('❌ Failed to create Goal Tracking issue:', error.message);
+              process.exit(1);
+            }
+
+      - name: Commit Pipeline State
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add logs/pipeline/
+          git commit -m "Pipeline: Created FT-$(printf '%03d' ${{ github.event.issue.number }}) tracking [skip deploy]" || echo "No pipeline changes"
+          git push

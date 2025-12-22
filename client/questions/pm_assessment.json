@@ -1,0 +1,168 @@
+[
+  {
+    "id": "product_skills",
+    "title": "🛠️ Product Skills",
+    "subtitle": "How do you build great products?",
+    "context": "These questions explore your hands-on product management abilities and preferred tools.",
+    "fields": [
+      {
+        "type": "likert",
+        "id": "requirements_comfort",
+        "label": "Comfort level defining product requirements",
+        "labels": ["Very Low", "Low", "Neutral", "High", "Very High"],
+        "required": true
+      },
+      {
+        "type": "textarea",
+        "id": "discovery_experience",
+        "label": "Describe your product discovery experience",
+        "placeholder": "Share methods you've used like interviews, surveys or prototypes",
+        "required": true
+      },
+      {
+        "type": "multi-choice",
+        "id": "pm_tools",
+        "label": "Tools you use regularly",
+        "options": [
+          { "value": "jira", "label": "JIRA", "icon": "📌" },
+          { "value": "trello", "label": "Trello", "icon": "📋" },
+          { "value": "asana", "label": "Asana", "icon": "✅" },
+          { "value": "notion", "label": "Notion", "icon": "📝" },
+          { "value": "other", "label": "Other", "icon": "➕" }
+        ],
+        "required": false
+      }
+    ]
+  },
+  {
+    "id": "leadership",
+    "title": "🤝 Leadership",
+    "subtitle": "Guiding teams to success",
+    "context": "Assess your ability to inspire and influence others without authority.",
+    "fields": [
+      {
+        "type": "likert",
+        "id": "cross_team_lead",
+        "label": "Confidence leading cross-functional teams",
+        "labels": ["Very Low", "Low", "Neutral", "High", "Very High"],
+        "required": true
+      },
+      {
+        "type": "textarea",
+        "id": "influence_example",
+        "label": "Example of influencing without authority",
+        "placeholder": "Share a short story of how you rallied people behind an idea",
+        "required": true
+      },
+      {
+        "type": "likert",
+        "id": "conflict_resolution",
+        "label": "Skill in resolving team conflicts",
+        "labels": ["Very Low", "Low", "Neutral", "High", "Very High"],
+        "required": false
+      }
+    ]
+  },
+  {
+    "id": "business_acumen",
+    "title": "📊 Business Acumen",
+    "subtitle": "Understanding the numbers",
+    "context": "Great PMs tie product decisions to business outcomes. Let's gauge your familiarity.",
+    "fields": [
+      {
+        "type": "likert",
+        "id": "metrics_understanding",
+        "label": "Understanding of business metrics",
+        "labels": ["Very Low", "Low", "Neutral", "High", "Very High"],
+        "required": true
+      },
+      {
+        "type": "textarea",
+        "id": "metrics_use",
+        "label": "How do you use metrics in decisions?",
+        "placeholder": "Describe how revenue, engagement or costs influence your priorities",
+        "required": false
+      },
+      {
+        "type": "multi-choice",
+        "id": "acumen_focus",
+        "label": "Skills you want to strengthen",
+        "options": [
+          { "value": "modeling", "label": "Financial Modeling", "icon": "💰" },
+          { "value": "market", "label": "Market Analysis", "icon": "📈" },
+          { "value": "pricing", "label": "Pricing Strategy", "icon": "💵" },
+          { "value": "stakeholders", "label": "Stakeholder Mgmt", "icon": "📣" }
+        ],
+        "required": false
+      }
+    ]
+  },
+  {
+    "id": "career_foundation",
+    "title": "📚 Career Foundation",
+    "subtitle": "Your background and training",
+    "context": "Understanding your starting point helps tailor recommendations.",
+    "fields": [
+      {
+        "type": "single-choice",
+        "id": "experience_years",
+        "label": "Years of PM experience",
+        "options": [
+          { "value": "lt1", "label": "< 1 year", "icon": "🌱" },
+          { "value": "1-3", "label": "1-3 years", "icon": "🌿" },
+          { "value": "3-5", "label": "3-5 years", "icon": "🌳" },
+          { "value": "5plus", "label": "5+ years", "icon": "🌲" }
+        ],
+        "required": true
+      },
+      {
+        "type": "single-choice",
+        "id": "education_level",
+        "label": "Highest relevant education",
+        "options": [
+          { "value": "none", "label": "None", "icon": "❓" },
+          { "value": "bachelor", "label": "Bachelor's", "icon": "🎓" },
+          { "value": "master", "label": "Master's", "icon": "🏆" },
+          { "value": "mba_phd", "label": "MBA/PhD", "icon": "🎖️" }
+        ],
+        "required": false
+      },
+      {
+        "type": "textarea",
+        "id": "certifications",
+        "label": "Certifications or training",
+        "placeholder": "List any PM courses, certifications or bootcamps",
+        "required": false
+      }
+    ]
+  },
+  {
+    "id": "executive_presence",
+    "title": "🎙️ Executive Presence & Mindset",
+    "subtitle": "Stepping into a strategic role",
+    "context": "Product leaders need poise and strategic thinking. Reflect on your comfort level.",
+    "fields": [
+      {
+        "type": "likert",
+        "id": "exec_presenting",
+        "label": "Comfort presenting to executives",
+        "labels": ["Very Low", "Low", "Neutral", "High", "Very High"],
+        "required": true
+      },
+      {
+        "type": "likert",
+        "id": "strategic_thinking",
+        "label": "Strategic thinking skills",
+        "labels": ["Very Low", "Low", "Neutral", "High", "Very High"],
+        "required": true
+      },
+      {
+        "type": "textarea",
+        "id": "mindset_challenge",
+        "label": "Your biggest mindset challenge",
+        "placeholder": "Where do you feel held back as a PM?",
+        "required": false
+      }
+    ]
+  }
+]

@@ -1,0 +1,573 @@
+/**
+ * Journey API Routes
+ * Handles the 7-stage recursive journey system endpoints
+ */
+
+const express = require('express');
+const router = express.Router();
+const journeyManager = require('../services/journeyManager');
+const habitLoopEngine = require('../services/habitLoopEngine');
+const adaptationEngine = require('../services/adaptationEngine');
+const dreamParser = require('../services/dreamParser');
+const { authenticateToken } = require('../middleware/auth');
+
+/**
+ * POST /api/journey/initialize
+ * Initialize user's journey from their parsed dream
+ */
+router.post('/initialize', authenticateToken, async (req, res) => {
+    try {
+        const { dreamText, confidence, timeHorizon } = req.body;
+
+        if (!dreamText) {
+            return res.status(400).json({
+                success: false,
+                error: 'Dream text is required'
+            });
+        }
+
+        // Parse the dream first
+        const parseResult = await dreamParser.parseDream(
+            dreamText.trim(),
+            confidence || 75,
+            timeHorizon || 12
+        );
+
+        if (!parseResult.success) {
+            return res.status(422).json({
+                success: false,
+                error: 'Failed to parse dream',
+                details: parseResult.error
+            });
+        }
+
+        // Initialize journey with parsed dream
+        const journeyResult = await journeyManager.initializeJourney(
+            req.user.id,
+            parseResult.data
+        );
+
+        if (journeyResult.success) {
+            res.json({
+                success: true,
+                data: {
+                    journey: journeyResult.data.journey,
+                    stage1: journeyResult.data.stage1,
+                    parsedDream: parseResult.data
+                },
+                message: 'Journey initialized successfully! Your 21-day transformation begins now.'
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                error: journeyResult.error,
+                message: 'Failed to initialize journey'
+            });
+        }
+    } catch (error) {
+        console.error('Error in journey initialization:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error',
+            message: 'Failed to initialize journey'
+        });
+    }
+});
+
+/**
+ * GET /api/journey/status
+ * Get current journey status and stage information
+ */
+router.get('/status', authenticateToken, async (req, res) => {
+    try {
+        const User = require('../models/User');
+        const user = await User.findById(req.user.id);
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'User not found'
+            });
+        }
+
+        const journeyData = user.stageData?.get('journeyData');
+        const currentStageData = user.stageData?.get(`stage${user.userStage}`);
+
+        if (!journeyData) {
+            return res.json({
+                success: true,
+                data: {
+                    hasJourney: false,
+                    message: 'No journey initialized. Start your transformation!'
+                }
+            });
+        }
+
+        // Calculate progress metrics
+        const daysSinceStart = Math.floor((new Date() - new Date(journeyData.startDate)) / (1000 * 60 * 60 * 24));
+        const totalTasks = currentStageData?.goals?.reduce((sum, goal) => sum + (goal.tasks?.length || 0), 0) || 0;
+        const completedTasks = currentStageData?.goals?.reduce((sum, goal) => 
+            sum + (goal.tasks?.filter(task => task.status === 'completed').length || 0), 0) || 0;
+
+        res.json({
+            success: true,
+            data: {
+                hasJourney: true,
+                currentStage: user.userStage,
+                stageName: currentStageData?.name || 'Unknown',
+                stagePurpose: currentStageData?.purpose || '',
+                daysSinceStart,
+                dreamType: journeyData.parsedDream?.mode,
+                overallGoal: journeyData.overallGoal,
+                progress: {
+                    totalTasks,
+                    completedTasks,
+                    completionRate: totalTasks > 0 ? completedTasks / totalTasks : 0
+                },
+                beliefScore: journeyData.beliefScore,
+                timeFrame: journeyData.timeFrame
+            }
+        });
+    } catch (error) {
+        console.error('Error getting journey status:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
+
+/**
+ * GET /api/journey/current-stage
+ * Get detailed current stage data with tasks
+ */
+router.get('/current-stage', authenticateToken, async (req, res) => {
+    try {
+        const User = require('../models/User');
+        const user = await User.findById(req.user.id);
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'User not found'
+            });
+        }
+
+        const currentStageData = user.stageData?.get(`stage${user.userStage}`);
+        
+        if (!currentStageData) {
+            return res.status(404).json({
+                success: false,
+                error: 'Current stage data not found'
+            });
+        }
+
+        // Get pending tasks for today
+        const today = new Date();
+        const todaysTasks = [];
+        
+        currentStageData.goals?.forEach(goal => {
+            goal.tasks?.forEach(task => {
+                const taskDate = new Date(task.scheduledDate);
+                if (taskDate.toDateString() === today.toDateString()) {
+                    todaysTasks.push({
+                        ...task,
+                        goalTitle: goal.title,
+                        goalId: goal.id
+                    });
+                }
+            });
+        });
+
+        res.json({
+            success: true,
+            data: {
+                stage: currentStageData,
+                todaysTasks: todaysTasks.sort((a, b) => a.status === 'completed' ? 1 : -1),
+                requirements: currentStageData.requirements
+            }
+        });
+    } catch (error) {
+        console.error('Error getting current stage:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
+
+/**
+ * POST /api/journey/complete-task
+ * Mark a task as completed
+ */
+router.post('/complete-task', authenticateToken, async (req, res) => {
+    try {
+        const { taskId, goalId, reflection } = req.body;
+
+        if (!taskId || !goalId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Task ID and Goal ID are required'
+            });
+        }
+
+        const User = require('../models/User');
+        const user = await User.findById(req.user.id);
+        const currentStageData = user.stageData?.get(`stage${user.userStage}`);
+
+        if (!currentStageData?.goals) {
+            return res.status(404).json({
+                success: false,
+                error: 'Stage data not found'
+            });
+        }
+
+        // Find and update the task
+        let taskFound = false;
+        for (const goal of currentStageData.goals) {
+            if (goal.id === goalId) {
+                for (const task of goal.tasks || []) {
+                    if (task.id === taskId) {
+                        task.status = 'completed';
+                        task.completedAt = new Date();
+                        if (reflection) {
+                            task.reflection = reflection;
+                        }
+                        taskFound = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!taskFound) {
+            return res.status(404).json({
+                success: false,
+                error: 'Task not found'
+            });
+        }
+
+        // Save updated data
+        user.stageData.set(`stage${user.userStage}`, currentStageData);
+        await user.save();
+
+        // Process the action through habit loop engine
+        const actionResult = await habitLoopEngine.processAction(req.user.id, {
+            type: 'task_completed',
+            taskId,
+            goalId,
+            reflection,
+            quality: reflection && reflection.length > 50 ? 'high' : 'medium'
+        });
+
+        res.json({
+            success: true,
+            data: {
+                message: 'Task completed successfully!',
+                reward: actionResult.success ? actionResult.data.reward : null,
+                nextTrigger: actionResult.success ? actionResult.data.nextTrigger : null
+            }
+        });
+    } catch (error) {
+        console.error('Error completing task:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
+
+/**
+ * POST /api/journey/skip-task
+ * Mark a task as skipped with reason
+ */
+router.post('/skip-task', authenticateToken, async (req, res) => {
+    try {
+        const { taskId, goalId, reason } = req.body;
+
+        const User = require('../models/User');
+        const user = await User.findById(req.user.id);
+        const currentStageData = user.stageData?.get(`stage${user.userStage}`);
+
+        // Find and update the task
+        let taskFound = false;
+        for (const goal of currentStageData.goals) {
+            if (goal.id === goalId) {
+                for (const task of goal.tasks || []) {
+                    if (task.id === taskId) {
+                        task.status = 'skipped';
+                        task.skippedAt = new Date();
+                        task.skipReason = reason || 'no_reason_provided';
+                        taskFound = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!taskFound) {
+            return res.status(404).json({
+                success: false,
+                error: 'Task not found'
+            });
+        }
+
+        user.stageData.set(`stage${user.userStage}`, currentStageData);
+        await user.save();
+
+        // Trigger adaptation analysis for skipped tasks
+        const adaptationResult = await adaptationEngine.analyzeAndAdapt(req.user.id);
+
+        res.json({
+            success: true,
+            data: {
+                message: 'Task skipped. We\'ll adapt your journey accordingly.',
+                adaptationApplied: adaptationResult.success
+            }
+        });
+    } catch (error) {
+        console.error('Error skipping task:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
+
+/**
+ * GET /api/journey/trigger
+ * Get contextual trigger/nudge for user
+ */
+router.get('/trigger', authenticateToken, async (req, res) => {
+    try {
+        const { context } = req.query; // morning, afternoon, evening, general
+        
+        const triggerResult = await habitLoopEngine.generateTrigger(
+            req.user.id, 
+            context || 'general'
+        );
+
+        if (triggerResult.success) {
+            res.json({
+                success: true,
+                data: triggerResult.data
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                error: triggerResult.error
+            });
+        }
+    } catch (error) {
+        console.error('Error generating trigger:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
+
+/**
+ * POST /api/journey/progress-stage
+ * Try to progress to next stage if requirements are met
+ */
+router.post('/progress-stage', authenticateToken, async (req, res) => {
+    try {
+        const progressResult = await journeyManager.progressToNextStage(req.user.id);
+
+        if (progressResult.success) {
+            if (progressResult.graduation) {
+                res.json({
+                    success: true,
+                    data: {
+                        graduation: true,
+                        message: 'Congratulations! You have completed your 21-day transformation journey! 🎉'
+                    }
+                });
+            } else {
+                res.json({
+                    success: true,
+                    data: {
+                        newStage: progressResult.data.newStage,
+                        stageContent: progressResult.data.stageContent,
+                        rewards: progressResult.data.rewards,
+                        message: `Welcome to Stage ${progressResult.data.newStage}! 🚀`
+                    }
+                });
+            }
+        } else {
+            res.json({
+                success: false,
+                reason: progressResult.reason,
+                action: progressResult.action,
+                message: 'Stage requirements not yet met. Keep going!'
+            });
+        }
+    } catch (error) {
+        console.error('Error progressing stage:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
+
+/**
+ * GET /api/journey/adaptation-analysis
+ * Get current adaptation analysis for user
+ */
+router.get('/adaptation-analysis', authenticateToken, async (req, res) => {
+    try {
+        const analysisResult = await adaptationEngine.analyzeAndAdapt(req.user.id);
+
+        if (analysisResult.success) {
+            res.json({
+                success: true,
+                data: analysisResult.data
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                error: analysisResult.error
+            });
+        }
+    } catch (error) {
+        console.error('Error in adaptation analysis:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
+
+/**
+ * POST /api/journey/regenerate-goals
+ * Regenerate goals for current stage based on performance
+ */
+router.post('/regenerate-goals', authenticateToken, async (req, res) => {
+    try {
+        const { reason } = req.body; // 'poor_performance', 'user_request', 'adaptation'
+
+        const User = require('../models/User');
+        const user = await User.findById(req.user.id);
+        const journeyData = user.stageData?.get('journeyData');
+
+        if (!journeyData) {
+            return res.status(404).json({
+                success: false,
+                error: 'No journey found'
+            });
+        }
+
+        // Generate new stage content
+        const newStageContent = await journeyManager.generateStageContent(
+            user.userStage,
+            journeyData.parsedDream,
+            user
+        );
+
+        // Mark as regenerated
+        newStageContent.regenerated = true;
+        newStageContent.regenerationReason = reason || 'user_request';
+        newStageContent.regeneratedAt = new Date();
+
+        user.stageData.set(`stage${user.userStage}`, newStageContent);
+        await user.save();
+
+        res.json({
+            success: true,
+            data: {
+                newContent: newStageContent,
+                message: 'Goals regenerated successfully! Fresh start with personalized content.'
+            }
+        });
+    } catch (error) {
+        console.error('Error regenerating goals:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
+
+/**
+ * GET /api/journey/stats
+ * Get comprehensive journey statistics
+ */
+router.get('/stats', authenticateToken, async (req, res) => {
+    try {
+        const User = require('../models/User');
+        const user = await User.findById(req.user.id);
+        const journeyData = user.stageData?.get('journeyData');
+
+        if (!journeyData) {
+            return res.json({
+                success: true,
+                data: { hasJourney: false }
+            });
+        }
+
+        // Calculate comprehensive stats
+        const stats = {
+            journeyStartDate: journeyData.startDate,
+            currentStage: user.userStage,
+            daysSinceStart: Math.floor((new Date() - new Date(journeyData.startDate)) / (1000 * 60 * 60 * 24)),
+            dreamType: journeyData.parsedDream?.mode,
+            beliefProgression: journeyData.beliefScore,
+            totalStagesCompleted: user.userStage - 1,
+            overallStats: {
+                totalTasks: 0,
+                completedTasks: 0,
+                skippedTasks: 0,
+                reflections: 0
+            },
+            stageStats: []
+        };
+
+        // Calculate stats for each completed stage
+        for (let stage = 1; stage <= user.userStage; stage++) {
+            const stageData = user.stageData?.get(`stage${stage}`);
+            if (stageData?.goals) {
+                const stageTasks = stageData.goals.reduce((acc, goal) => acc + (goal.tasks?.length || 0), 0);
+                const stageCompleted = stageData.goals.reduce((acc, goal) => 
+                    acc + (goal.tasks?.filter(task => task.status === 'completed').length || 0), 0);
+                const stageSkipped = stageData.goals.reduce((acc, goal) => 
+                    acc + (goal.tasks?.filter(task => task.status === 'skipped').length || 0), 0);
+                const stageReflections = stageData.goals.reduce((acc, goal) => 
+                    acc + (goal.tasks?.filter(task => task.reflection).length || 0), 0);
+
+                stats.overallStats.totalTasks += stageTasks;
+                stats.overallStats.completedTasks += stageCompleted;
+                stats.overallStats.skippedTasks += stageSkipped;
+                stats.overallStats.reflections += stageReflections;
+
+                stats.stageStats.push({
+                    stage,
+                    name: stageData.name,
+                    status: stageData.status || (stage === user.userStage ? 'active' : 'completed'),
+                    totalTasks: stageTasks,
+                    completedTasks: stageCompleted,
+                    completionRate: stageTasks > 0 ? stageCompleted / stageTasks : 0,
+                    startDate: stageData.startDate,
+                    endDate: stageData.endDate
+                });
+            }
+        }
+
+        res.json({
+            success: true,
+            data: {
+                hasJourney: true,
+                stats
+            }
+        });
+    } catch (error) {
+        console.error('Error getting journey stats:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
+
+module.exports = router;

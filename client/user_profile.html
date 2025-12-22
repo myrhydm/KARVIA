@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - Manifestor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/design-system.css">
+    <style>
+        .profile-section {
+            transition: all 0.3s ease;
+        }
+        
+        .profile-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area.dragover {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+        
+        .upload-area:hover {
+            border-color: #6b7280;
+        }
+        
+        .vision-quest-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .assessment-badge {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        
+        .progress-ring circle {
+            stroke-dasharray: 251.2;
+            stroke-dashoffset: 251.2;
+            transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
+    <!-- Navigation will be injected here -->
+    <div id="navigation-container"></div>
+
+    <div class="min-h-screen py-8">
+        <!-- Main Content -->
+        <div class="max-w-6xl mx-auto px-4">
+            <!-- Header -->
+            <div class="mb-8">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-900 mb-2">User Profile</h1>
+                            <p class="text-gray-600">Manage your personal information, dreams, and journey preferences</p>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <div class="text-right">
+                                <div class="text-sm text-gray-500">Member since</div>
+                                <div id="member-since" class="font-medium text-gray-900">Loading...</div>
+                            </div>
+                            <div id="profile-avatar" class="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xl font-bold">
+                                U
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left Column - Basic Info & Vision Quest -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Basic Information -->
+                    <div class="profile-section bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-xl font-semibold text-gray-900">Basic Information</h2>
+                            <button id="edit-basic-info" class="btn btn-secondary">Edit</button>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                                <input type="text" id="full-name" class="input" placeholder="Enter your full name" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                                <input type="email" id="email" class="input" placeholder="Enter your email" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                                <input type="tel" id="phone" class="input" placeholder="Enter your phone number" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                                <input type="text" id="location" class="input" placeholder="City, Country" readonly>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                                <textarea id="bio" class="input" rows="3" placeholder="Tell us about yourself..." readonly></textarea>
+                            </div>
+                            
+                            <!-- Professional Assets -->
+                            <div class="md:col-span-2">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4 border-b border-gray-200 pb-2">💎 Professional Assets</h3>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Blog/Website URL</label>
+                                <input type="url" id="blog-url" class="input" placeholder="https://yourblog.com or Medium profile" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Twitter/X Handle</label>
+                                <input type="text" id="twitter-handle" class="input" placeholder="@yourhandle" readonly>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Side Projects</label>
+                                <textarea id="side-projects" class="input" rows="2" placeholder="Apps you've built, communities you've started, creative projects, etc." readonly></textarea>
+                            </div>
+                        </div>
+                        
+                        <div id="basic-info-actions" class="mt-6 hidden">
+                            <div class="flex space-x-3">
+                                <button id="save-basic-info" class="btn btn-primary">Save Changes</button>
+                                <button id="cancel-basic-info" class="btn btn-secondary">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vision Quest Section -->
+                    <div class="profile-section vision-quest-card rounded-lg shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h2 class="text-xl font-semibold text-white mb-2">Vision Quest Assessment</h2>
+                                <p class="text-blue-100">Discover your readiness and create your personalized journey</p>
+                            </div>
+                            <div class="assessment-badge px-4 py-2 rounded-full text-white text-sm font-medium">
+                                <span id="assessment-status">Not Started</span>
+                            </div>
+                        </div>
+                        
+                        <div id="vision-quest-content">
+                            <!-- Vision Quest will be loaded here -->
+                        </div>
+                        
+                        <div class="mt-6">
+                            <button id="start-vision-quest" class="btn btn-primary bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:from-yellow-500 hover:to-orange-600 transform hover:scale-105 transition-all duration-200">
+                                🎯 Start Vision Quest
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Resume Upload Section -->
+                    <div class="profile-section bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+                        <h2 class="text-xl font-semibold text-gray-900 mb-6">Resume & Documents</h2>
+                        
+                        <div class="space-y-4">
+                            <!-- Upload Area -->
+                            <div id="resume-upload-area" class="upload-area p-8 text-center">
+                                <div class="flex flex-col items-center">
+                                    <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                    </svg>
+                                    <h3 class="text-lg font-medium text-gray-900 mb-2">Upload Resume</h3>
+                                    <p class="text-gray-600 mb-4">Drag and drop your resume here, or click to select</p>
+                                    <input type="file" id="resume-file-input" class="hidden" accept=".pdf,.doc,.docx">
+                                    <button id="select-resume-btn" class="btn btn-secondary">Choose File</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Uploaded Files -->
+                            <div id="uploaded-files" class="space-y-2">
+                                <!-- Uploaded files will appear here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column - Stats & Preferences -->
+                <div class="space-y-6">
+                    <!-- Profile Stats -->
+                    <div class="profile-section bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+                        <h2 class="text-xl font-semibold text-gray-900 mb-6">Profile Stats</h2>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-600">Journeys Created</span>
+                                <span id="journeys-count" class="font-semibold text-gray-900">0</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-600">Goals Achieved</span>
+                                <span id="goals-achieved" class="font-semibold text-gray-900">0</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-600">Current Streak</span>
+                                <span id="current-streak" class="font-semibold text-gray-900">0 days</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-600">Total XP</span>
+                                <span id="total-xp" class="font-semibold text-gray-900">0</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Ring -->
+                        <div class="mt-6 flex flex-col items-center">
+                            <div class="relative w-24 h-24">
+                                <svg class="progress-ring w-24 h-24">
+                                    <circle cx="48" cy="48" r="40" stroke="#e5e7eb" stroke-width="8" fill="transparent"></circle>
+                                    <circle id="progress-circle" cx="48" cy="48" r="40" stroke="#3b82f6" stroke-width="8" fill="transparent"></circle>
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <span id="completion-percentage" class="text-lg font-bold text-gray-900">0%</span>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-2">Overall Progress</p>
+                        </div>
+                    </div>
+
+                    <!-- Journey Preferences -->
+                    <div class="profile-section bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-xl font-semibold text-gray-900">Journey Preferences</h2>
+                            <button id="edit-preferences" class="btn btn-secondary">Edit</button>
+                        </div>
+                        
+                        <!-- Professional Display (shown when not editing) -->
+                        <div id="preferences-display">
+                            <!-- Content will be populated by JavaScript -->
+                        </div>
+
+                        <!-- Edit Form (hidden by default) -->
+                        <div id="preferences-form" class="hidden space-y-6">
+                            <!-- Learning & Time Preferences -->
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-900 mb-3">📚 Learning & Time</h3>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Learning Style</label>
+                                        <select id="learning-style" class="input text-sm" disabled>
+                                            <option value="hands-on">🛠️ Hands-on</option>
+                                            <option value="research">📚 Research First</option>
+                                            <option value="community">🤝 Community Learning</option>
+                                            <option value="structured">📋 Structured Curriculum</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Time Commitment</label>
+                                        <select id="time-commitment" class="input text-sm" disabled>
+                                            <option value="micro">⚡ Micro Bursts (15-30 min)</option>
+                                            <option value="focused">🎯 Focused Blocks (1-2 hours)</option>
+                                            <option value="flexible">🌊 Flexible Flow</option>
+                                            <option value="intensive">🚀 Intensive (2+ hours)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Current Focus & Goals -->
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-900 mb-3">🎯 Current Focus</h3>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Focus Area</label>
+                                        <select id="focus-area" class="input text-sm" disabled>
+                                            <option value="get-job">💼 Get a Job</option>
+                                            <option value="build-business">🚀 Build Business</option>
+                                            <option value="get-promotion">📈 Get Promotion/Raise</option>
+                                            <option value="skill-building">🛠️ Skill Building</option>
+                                            <option value="career-change">🔄 Career Change</option>
+                                            <option value="freelance">💻 Freelance/Consulting</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Challenge Level</label>
+                                        <select id="challenge-level" class="input text-sm" disabled>
+                                            <option value="easy-wins">🎉 Easy Wins</option>
+                                            <option value="balanced">⚖️ Balanced</option>
+                                            <option value="stretch">🏃 Stretch Goals</option>
+                                            <option value="ambitious">🦁 Ambitious</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Collaboration & Accountability -->
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-900 mb-3">🤝 Work Style</h3>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Collaboration Style</label>
+                                        <select id="collaboration-style" class="input text-sm" disabled>
+                                            <option value="solo">🏠 Solo Player</option>
+                                            <option value="small-group">👥 Small Groups</option>
+                                            <option value="community">🌐 Community Driven</option>
+                                            <option value="mentorship">🧙 Mentorship</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Accountability Type</label>
+                                        <select id="accountability-type" class="input text-sm" disabled>
+                                            <option value="self-directed">🎯 Self-Directed</option>
+                                            <option value="check-ins">📞 Regular Check-ins</option>
+                                            <option value="peer-buddy">🤝 Peer Buddy</option>
+                                            <option value="coach">👨‍🏫 Coach/Mentor</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Notifications -->
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-900 mb-3">🔔 Notifications</h3>
+                                <div class="space-y-2">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="daily-reminders" class="mr-2" disabled>
+                                        <span class="text-xs text-gray-700">Daily task reminders</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="progress-updates" class="mr-2" disabled>
+                                        <span class="text-xs text-gray-700">Weekly progress updates</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="motivation-quotes" class="mr-2" disabled>
+                                        <span class="text-xs text-gray-700">Motivational quotes</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="milestone-celebrations" class="mr-2" disabled>
+                                        <span class="text-xs text-gray-700">Milestone celebrations</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="preferences-actions" class="mt-6 hidden">
+                            <div class="flex space-x-3">
+                                <button id="save-preferences" class="btn btn-primary">Save Changes</button>
+                                <button id="cancel-preferences" class="btn btn-secondary">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50 hidden">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p class="text-gray-600">Loading profile...</p>
+        </div>
+    </div>
+
+    <script src="pages/scripts/navigation.js"></script>
+    <script src="pages/scripts/user_profile.js"></script>
+</body>
+</html>

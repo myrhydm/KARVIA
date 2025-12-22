@@ -1,0 +1,50 @@
+name: File Organization Validation
+on:
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+
+jobs:
+  check-structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for git grep
+      
+      - name: Install tools
+        run: sudo apt-get update -q && sudo apt-get install -y jq
+      
+      - name: Check root file allowlist
+        run: ./scripts/ci/check-sitemap.sh
+      
+      - name: Prevent archive imports  
+        run: ./scripts/ci/check-no-archive-imports.sh
+      
+      - name: Validate runtime code separation
+        run: |
+          echo "🔍 Checking runtime code is not in docs..."
+          if find docs/ -name "*.js" -o -name "*.ts" -o -name "*.tsx" | grep -v node_modules | grep -q .; then
+            echo "❌ Runtime code found in docs/ directory"
+            find docs/ -name "*.js" -o -name "*.ts" -o -name "*.tsx" | grep -v node_modules
+            exit 1
+          fi
+          echo "✅ Runtime code properly separated from documentation"
+      
+      - name: Check for scattered test files
+        run: |
+          echo "🔍 Checking for test files outside qa/..."
+          SCATTERED_TESTS=$(find . -name "*.test.js" -o -name "*.spec.js" | grep -v qa/ | grep -v node_modules || true)
+          if [ -n "$SCATTERED_TESTS" ]; then
+            echo "⚠️ Test files found outside qa/ directory:"
+            echo "$SCATTERED_TESTS"
+            echo "💡 Consider consolidating in qa/automation/tests/"
+          else
+            echo "✅ Test files properly organized"
+          fi

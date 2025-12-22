@@ -1,0 +1,12 @@
+[
+  {
+    "id": "qa/automation/tests/e2e/test-complete-user-flow.js::@flaky should handle concurrent user registrations",
+    "path": "qa/automation/tests/e2e/test-complete-user-flow.js",
+    "title": "@flaky should handle concurrent user registrations",
+    "owner": "@backend-lead",
+    "impact": "medium",
+    "first_seen": "2025-01-15T10:30:00Z",
+    "expires": "2025-10-15T10:30:00Z",
+    "notes": "Race condition in user creation - see issue #456"
+  }
+]

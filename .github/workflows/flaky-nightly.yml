@@ -1,0 +1,233 @@
+name: Flaky Nightly
+on:
+  schedule:
+    - cron: "0 3 * * *"   # Daily at 3 AM UTC
+  workflow_dispatch:
+
+jobs:
+  quarantine:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write         # commit flaky-history + push
+      issues: write           # create/update attention issues
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      - name: Install jq
+        run: sudo apt-get update -y && sudo apt-get install -y jq
+
+      - run: npm ci || echo "No package-lock / not a Node app; continuing"
+
+      # Check if we have any quarantined tests
+      - name: Check quarantine list
+        id: check
+        run: |
+          if [ -f qa/flaky.json ]; then
+            COUNT=$(jq 'length' qa/flaky.json)
+            echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+            echo "📊 Quarantined tests: $COUNT"
+          else
+            echo "count=0" >> "$GITHUB_OUTPUT"
+            echo "📊 No quarantine list found"
+          fi
+
+      # Install Playwright (if needed)
+      - name: Install Playwright (if needed)
+        if: ${{ steps.check.outputs.count != '0' }}
+        run: |
+          if [ -f playwright.config.js ] || [ -f playwright.config.ts ]; then
+            npx playwright install --with-deps
+          fi
+
+      # Run only @flaky tests with detailed reporting
+      - name: Run quarantined tests
+        if: ${{ steps.check.outputs.count != '0' }}
+        run: |
+          echo "🧪 Running quarantined @flaky tests..."
+          mkdir -p logs/qa
+
+          # --- JEST ---
+          if node -e "require.resolve('jest')" >/dev/null 2>&1; then
+            echo "Running Jest @flaky tests..."
+            JEST_JUNIT_OUTPUT=./logs/qa/flaky-jest-results.xml \
+              npx jest --testNamePattern='@flaky' --runInBand \
+              --reporters=default --reporters=jest-junit --verbose || echo "Some Jest flaky tests failed (expected)"
+          else
+            echo "ℹ️ Jest not detected; skipping"
+          fi
+
+          # --- PLAYWRIGHT ---
+          if [ -f playwright.config.js ] || [ -f playwright.config.ts ]; then
+            echo "Running Playwright @flaky tests..."
+            npx playwright test -g "@flaky" --reporter=junit,line || echo "Some Playwright flaky tests failed (expected)"
+            # Move default JUnit file if present
+            if [ -f test-results.xml ]; then
+              mv test-results.xml logs/qa/flaky-playwright-results.xml
+            fi
+          else
+            echo "ℹ️ Playwright not detected; skipping"
+          fi
+
+          # --- CYPRESS (requires cypress-grep) ---
+          if [ -f cypress.config.js ] || [ -f cypress.config.ts ]; then
+            if node -e "require.resolve('cypress-grep')" >/dev/null 2>&1; then
+              echo "Running Cypress @flaky tests (cypress-grep)..."
+              npx cypress run --env grep='@flaky' || echo "Some Cypress flaky tests failed (expected)"
+            else
+              echo "⚠️ cypress-grep not installed; skipping Cypress grep run"
+            fi
+          else
+            echo "ℹ️ Cypress not detected; skipping"
+          fi
+
+      # Analyze results and update flaky history
+      - name: Update flaky history & analyze trends
+        if: ${{ steps.check.outputs.count != '0' }}
+        env:
+          N_PASSES_TO_UNQUARANTINE: 3
+        run: |
+          mkdir -p logs/qa
+          node - <<'JS'
+          const fs = require('fs');
+          const flakyPath = 'qa/flaky.json';
+          const histPath = 'logs/qa/flaky-history.json';
+
+          if (!fs.existsSync(flakyPath)) { console.log('No flaky.json'); process.exit(0); }
+          const flakyList = JSON.parse(fs.readFileSync(flakyPath,'utf8'));
+          const history = fs.existsSync(histPath) ? JSON.parse(fs.readFileSync(histPath,'utf8')) : {};
+
+          const today = new Date().toISOString().split('T')[0];
+
+          function parse(xmlPath){
+            if(!fs.existsSync(xmlPath)) return {passed:new Set(), failed:new Set()};
+            const xml = fs.readFileSync(xmlPath,'utf8');
+            const tcRe = /<testcase[^>]+name="([^"]*@flaky[^"]*)"[^>]*>([\s\S]*?)<\/testcase>|<testcase[^>]+name="([^"]*@flaky[^"]*)"[^>]*\/>/g;
+            const failedRe = /<failure[\s>]/;
+            const res = {passed:new Set(), failed:new Set()};
+            let m;
+            while((m = tcRe.exec(xml))!==null){
+              const name = (m[1] || m[3] || '').trim();
+              const body = m[2] || '';
+              if(!name) continue;
+              (failedRe.test(body) ? res.failed : res.passed).add(name);
+            }
+            return res;
+          }
+
+          const agg = [parse('logs/qa/flaky-jest-results.xml'), parse('logs/qa/flaky-playwright-results.xml')]
+            .reduce((a,b)=>({passed:new Set([...a.passed,...b.passed]), failed:new Set([...a.failed,...b.failed])}), {passed:new Set(), failed:new Set()});
+
+          const ready=[], needs=[];
+          const needles = s => [...s];
+
+          flakyList.forEach(t=>{
+            const id = t.id, title = (t.title||'').replace(/^@flaky\s*/,'');
+            const h = history[id] ||= {passStreak:0,totalRuns:0,lastRun:null,trend:[]};
+            h.totalRuns++; h.lastRun=today;
+
+            const passed = needles(agg.passed).some(n=>n.includes(title));
+            const failed = needles(agg.failed).some(n=>n.includes(title));
+
+            if (passed && !failed) { h.passStreak++; h.trend.push({date:today,result:'pass'}); }
+            else if (failed)      { h.passStreak=0;  h.trend.push({date:today,result:'fail'}); }
+            else                  { h.trend.push({date:today,result:'not_run'}); }
+            h.trend = h.trend.slice(-30);
+
+            if (h.passStreak >= parseInt(process.env.N_PASSES_TO_UNQUARANTINE||'3',10)) ready.push(t);
+            if (t.expires && new Date(t.expires) < new Date()) needs.push(t);
+          });
+
+          fs.writeFileSync(histPath, JSON.stringify(history,null,2));
+
+          const summary = {
+            date: today,
+            totalQuarantined: flakyList.length,
+            readyToUnquarantine: ready.length,
+            needsAttention: needs.length,
+            testResults: { passed: agg.passed.size, failed: agg.failed.size, total: agg.passed.size + agg.failed.size }
+          };
+          fs.writeFileSync('logs/qa/nightly-summary.json', JSON.stringify(summary,null,2));
+
+          console.log('📊 Nightly Quarantine Summary:', summary);
+          if (ready.length) console.log('🎉 Ready to unquarantine:', ready.map(t=>t.id));
+          if (needs.length) console.log('⚠️ Expired quarantines:', needs.map(t=>t.id));
+          JS
+
+      # Persist history so pass streak survives to tomorrow
+      - name: Commit flaky history
+        if: ${{ steps.check.outputs.count != '0' }}
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "github-actions"
+          git add logs/qa/flaky-history.json logs/qa/nightly-summary.json || true
+          git commit -m "chore(qa): update flaky history [skip deploy]" || echo "No changes"
+          git push || echo "No push (perhaps no changes)"
+
+      # Upload artifacts for analysis
+      - name: Upload nightly artifacts
+        if: ${{ steps.check.outputs.count != '0' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: flaky-nightly-${{ github.run_id }}
+          path: |
+            logs/qa/**
+            qa/flaky.json
+          retention-days: 30
+
+      # Create / update attention issue
+      - name: Create attention-needed issue
+        if: ${{ steps.check.outputs.count != '0' }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            if (!fs.existsSync('logs/qa/nightly-summary.json')) return;
+            const summary = JSON.parse(fs.readFileSync('logs/qa/nightly-summary.json','utf8'));
+
+            if (summary.needsAttention > 0 || summary.readyToUnquarantine > 0) {
+              const title = `🧪 Flaky Test Quarantine Review - ${summary.date}`;
+              const body = `
+## Nightly Quarantine Review
+
+**Summary**
+- Total quarantined: ${summary.totalQuarantined}
+- Needs attention (expired): ${summary.needsAttention}
+- Ready to unquarantine: ${summary.readyToUnquarantine}
+
+Artifacts: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+**Next Steps**
+1) Review artifacts
+2) PR to update \`qa/flaky.json\`
+3) Tag owners for expired tests
+`.trim();
+
+              const issues = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: 'flaky-tests,automated',
+                state: 'open'
+              });
+              const existing = issues.data.find(i => i.title.includes('Flaky Test Quarantine Review'));
+
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body: `## Update: ${summary.date}\n\n${body}`
+                });
+              } else {
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title,
+                  body,
+                  labels: ['flaky-tests','automated','qa']
+                });
+              }
+            }

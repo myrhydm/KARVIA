@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stage-Based Permissions Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .user-dashboard {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+        .user-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .user-stats {
+            display: flex;
+            gap: 20px;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #3498db;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+        .components {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .component {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f9f9f9;
+        }
+        .component-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            margin: 5px 0;
+        }
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+        .btn-disabled {
+            background-color: #bdc3c7;
+            color: #7f8c8d;
+            cursor: not-allowed;
+        }
+        .btn-success {
+            background-color: #27ae60;
+            color: white;
+        }
+        .locked-message {
+            font-size: 12px;
+            color: #e74c3c;
+            margin-top: 5px;
+        }
+        .unlock-progress {
+            background-color: #ecf0f1;
+            border-radius: 10px;
+            height: 8px;
+            margin: 5px 0;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #3498db;
+            transition: width 0.3s ease;
+        }
+        .hidden {
+            display: none;
+        }
+        .stage-badge {
+            background-color: #9b59b6;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .streak-badge {
+            background-color: #f39c12;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .demo-controls {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .demo-controls h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .demo-controls button {
+            margin: 5px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .demo-controls button.active {
+            background-color: #3498db;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Stage-Based Permissions Demo</h1>
+            <p>Interactive demo showing how the dashboard adapts to user stage and streak count</p>
+        </div>
+
+        <div class="demo-controls">
+            <h3>Demo Controls</h3>
+            <p>Click to simulate different user scenarios:</p>
+            <button onclick="setUser('stage1_streak0')" class="demo-btn">Stage 1 - 0 Streak</button>
+            <button onclick="setUser('stage1_streak2')" class="demo-btn">Stage 1 - 2 Streak</button>
+            <button onclick="setUser('stage1_streak3')" class="demo-btn">Stage 1 - 3 Streak</button>
+            <button onclick="setUser('stage2_streak5')" class="demo-btn">Stage 2 - 5 Streak</button>
+            <button onclick="setUser('stage3_streak10')" class="demo-btn">Stage 3 - 10 Streak</button>
+        </div>
+
+        <div id="userDashboard" class="user-dashboard">
+            <!-- Dashboard content will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // Mock user data based on our test results
+        const users = {
+            stage1_streak0: {
+                name: "New User",
+                stage: 1,
+                streak: 0,
+                components: {
+                    dreamInput: { visible: true, enabled: true },
+                    checkInButton: { visible: true, enabled: true },
+                    visionQuestionnaireButton: {
+                        visible: true,
+                        enabled: false,
+                        locked: true,
+                        message: "Complete 3 more days to unlock!",
+                        progress: { current: 0, required: 3 }
+                    },
+                    taskFeedback: { visible: false, enabled: false },
+                    progressTracking: { visible: false, enabled: false },
+                    community: { visible: false, enabled: false }
+                }
+            },
+            stage1_streak2: {
+                name: "Motivated User",
+                stage: 1,
+                streak: 2,
+                components: {
+                    dreamInput: { visible: true, enabled: true },
+                    checkInButton: { visible: true, enabled: true },
+                    visionQuestionnaireButton: {
+                        visible: true,
+                        enabled: false,
+                        locked: true,
+                        message: "Complete 1 more day to unlock!",
+                        progress: { current: 2, required: 3 }
+                    },
+                    taskFeedback: { visible: false, enabled: false },
+                    progressTracking: { visible: false, enabled: false },
+                    community: { visible: false, enabled: false }
+                }
+            },
+            stage1_streak3: {
+                name: "Persistent User",
+                stage: 1,
+                streak: 3,
+                components: {
+                    dreamInput: { visible: true, enabled: true },
+                    checkInButton: { visible: true, enabled: true },
+                    visionQuestionnaireButton: {
+                        visible: true,
+                        enabled: true,
+                        locked: false,
+                        message: "Vision questionnaire unlocked! 🎉",
+                        progress: { current: 3, required: 3 }
+                    },
+                    taskFeedback: { visible: false, enabled: false },
+                    progressTracking: { visible: false, enabled: false },
+                    community: { visible: false, enabled: false }
+                }
+            },
+            stage2_streak5: {
+                name: "Engaged User",
+                stage: 2,
+                streak: 5,
+                components: {
+                    dreamInput: { visible: true, enabled: true },
+                    checkInButton: { visible: true, enabled: true },
+                    visionQuestionnaireButton: {
+                        visible: true,
+                        enabled: true,
+                        locked: false,
+                        message: "Vision questionnaire available",
+                        progress: { current: 5, required: 3 }
+                    },
+                    taskFeedback: { visible: true, enabled: true },
+                    progressTracking: { visible: true, enabled: true },
+                    community: { visible: false, enabled: false }
+                }
+            },
+            stage3_streak10: {
+                name: "Master User",
+                stage: 3,
+                streak: 10,
+                components: {
+                    dreamInput: { visible: true, enabled: true },
+                    checkInButton: { visible: true, enabled: true },
+                    visionQuestionnaireButton: {
+                        visible: true,
+                        enabled: true,
+                        locked: false,
+                        message: "Vision questionnaire available",
+                        progress: { current: 10, required: 3 }
+                    },
+                    taskFeedback: { visible: true, enabled: true },
+                    progressTracking: { visible: true, enabled: true },
+                    community: { visible: true, enabled: true }
+                }
+            }
+        };
+
+        let currentUser = 'stage1_streak0';
+
+        function setUser(userId) {
+            currentUser = userId;
+            
+            // Update button states
+            document.querySelectorAll('.demo-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            const user = users[currentUser];
+            const dashboard = document.getElementById('userDashboard');
+            
+            dashboard.innerHTML = `
+                <div class="user-info">
+                    <div class="user-name">${user.name}</div>
+                    <div class="user-stats">
+                        <div class="stat">
+                            <div class="stat-value">${user.stage}</div>
+                            <div class="stat-label">Stage</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">${user.streak}</div>
+                            <div class="stat-label">Streak</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="components">
+                    ${renderComponent('Dream Input', user.components.dreamInput, `
+                        <p>Enter your dream and goals</p>
+                        <button class="btn btn-primary">Update Dream</button>
+                    `)}
+                    
+                    ${renderComponent('Daily Check-in', user.components.checkInButton, `
+                        <p>All you have to do is show up!</p>
+                        <button class="btn btn-success">Check In Today</button>
+                    `)}
+                    
+                    ${renderComponent('Vision Questionnaire', user.components.visionQuestionnaireButton, `
+                        <p>Unlock deeper insights about your goals</p>
+                        <button class="btn ${user.components.visionQuestionnaireButton.enabled ? 'btn-primary' : 'btn-disabled'}"
+                                ${user.components.visionQuestionnaireButton.enabled ? '' : 'disabled'}>
+                            ${user.components.visionQuestionnaireButton.enabled ? 'Take Vision Questionnaire' : 'Vision Questionnaire (Locked)'}
+                        </button>
+                        ${user.components.visionQuestionnaireButton.locked ? `
+                            <div class="locked-message">${user.components.visionQuestionnaireButton.message}</div>
+                            <div class="unlock-progress">
+                                <div class="progress-bar" style="width: ${(user.components.visionQuestionnaireButton.progress.current / user.components.visionQuestionnaireButton.progress.required) * 100}%"></div>
+                            </div>
+                            <div style="font-size: 12px; color: #7f8c8d;">
+                                ${user.components.visionQuestionnaireButton.progress.current}/${user.components.visionQuestionnaireButton.progress.required} days
+                            </div>
+                        ` : ''}
+                    `)}
+                    
+                    ${renderComponent('Task Feedback', user.components.taskFeedback, `
+                        <p>Share how your tasks went</p>
+                        <button class="btn ${user.components.taskFeedback.enabled ? 'btn-primary' : 'btn-disabled'}"
+                                ${user.components.taskFeedback.enabled ? '' : 'disabled'}>
+                            Submit Feedback
+                        </button>
+                    `)}
+                    
+                    ${renderComponent('Progress Tracking', user.components.progressTracking, `
+                        <p>View your progress analytics</p>
+                        <button class="btn ${user.components.progressTracking.enabled ? 'btn-primary' : 'btn-disabled'}"
+                                ${user.components.progressTracking.enabled ? '' : 'disabled'}>
+                            View Progress
+                        </button>
+                    `)}
+                    
+                    ${renderComponent('Community', user.components.community, `
+                        <p>Connect with like-minded people</p>
+                        <button class="btn ${user.components.community.enabled ? 'btn-primary' : 'btn-disabled'}"
+                                ${user.components.community.enabled ? '' : 'disabled'}>
+                            Join Community
+                        </button>
+                    `)}
+                </div>
+            `;
+        }
+
+        function renderComponent(title, component, content) {
+            if (!component.visible) return '';
+            
+            return `
+                <div class="component">
+                    <div class="component-title">${title}</div>
+                    ${content}
+                </div>
+            `;
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('.demo-btn').classList.add('active');
+            renderDashboard();
+        });
+    </script>
+</body>
+</html>

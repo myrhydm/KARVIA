@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: goaltracker-integration-hub
+    runtime: node
+    buildCommand: |
+      # Install dependencies for main server
+      npm install --production
+      # Install dependencies for engines
+      cd server/engines
+      for engine in */; do
+        if [ -f "$engine/package.json" ]; then
+          echo "Installing dependencies for server/engines/$engine"
+          cd "$engine" && npm install --production && cd ..
+        fi
+      done
+    startCommand: npm start
+    rootDirectory: server
+    plan: starter
+    env: production
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        fromSecret: jwt-secret
+
+  - type: static
+    name: goaltracker-client
+    buildCommand: echo "Static files ready"
+    rootDirectory: client
+    publishDirectory: .
+    plan: free
+    env: production
+    region: oregon

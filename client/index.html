@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manifestor - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="css/design-system.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            opacity: 1 !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8">
+            <div class="flex flex-col items-center">
+                <img src="assets/WhiteMetallic.png" alt="Manifestor Logo" class="h-48 w-auto mb-4 object-contain object-center" style="filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));">
+                <span class="font-bold text-3xl text-gray-800" style="font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; letter-spacing: -0.02em;">Manifestor</span>
+            </div>
+
+            <!-- Login Form -->
+            <div id="login-view">
+                <h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">Sign in to your account</h2>
+                <p class="mt-2 text-center text-sm text-gray-600">
+                    Or
+                    <a href="#" id="show-signup" class="font-medium text-indigo-600 hover:text-indigo-500">create a new account</a>
+                </p>
+                <form id="loginForm" class="mt-8 space-y-6">
+                    <div class="rounded-md shadow-sm -space-y-px">
+                        <div>
+                            <label for="login-email" class="sr-only">Email address</label>
+                            <input id="login-email" name="email" type="email" autocomplete="email" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Email address">
+                        </div>
+                        <div>
+                            <label for="login-password" class="sr-only">Password</label>
+                            <input id="login-password" name="password" type="password" autocomplete="current-password" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Password">
+                        </div>
+                    </div>
+                    <div>
+                        <button type="submit" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Sign in</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Signup Form (Initially Hidden) -->
+            <div id="signup-view" class="hidden">
+                <h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">Create a new account</h2>
+                <p class="mt-2 text-center text-sm text-gray-600">
+                    Already have an account?
+                    <a href="#" id="show-login" class="font-medium text-indigo-600 hover:text-indigo-500">Sign in</a>
+                </p>
+                <form id="signupForm" class="mt-8 space-y-6">
+                    <div class="rounded-md shadow-sm -space-y-px">
+                         <div>
+                            <label for="signup-name" class="sr-only">Full Name</label>
+                            <input id="signup-name" name="name" type="text" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Full Name">
+                        </div>
+                        <div>
+                            <label for="signup-email" class="sr-only">Email address</label>
+                            <input id="signup-email" name="email" type="email" autocomplete="email" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Email address">
+                        </div>
+                        <div>
+                            <label for="signup-password" class="sr-only">Password</label>
+                            <input id="signup-password" name="password" type="password" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Password (min. 6 characters)">
+                        </div>
+                    </div>
+                    <div>
+                        <button type="submit" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Create Account</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Error Message Box -->
+            <div id="error-message" class="hidden mt-4 rounded-md bg-red-50 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" /></svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 id="error-text" class="text-sm font-medium text-red-800"></h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="pages/scripts/auth.js"></script>
+</body>
+</html>

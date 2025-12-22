@@ -1,0 +1,250 @@
+name: 🚀 Feature Request
+description: Submit a new feature request to enter the development bootloader process
+title: "[FEATURE] "
+labels: ["feature-request", "phase-0-intake", "needs-pm-assignment"]
+projects: ["Feature Development Pipeline"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # 🚀 Feature Request Intake
+        
+        **Welcome to our Feature Development Bootloader System!**
+        
+        This feature request will automatically:
+        - Create a stub in `/pm/active-features/[feature-name]/`
+        - Assign to Product Manager for Phase 1 (Requirements)  
+        - Track progress through our systematic 6-phase development process
+        
+        Please provide detailed information to help our Product Manager understand and prioritize your request.
+
+  - type: input
+    id: feature_name
+    attributes:
+      label: Feature Name
+      description: A clear, concise name for this feature (used for folder creation)
+      placeholder: "e.g., User Page Navigation, Export User Data, Dark Mode Toggle"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem_statement
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? Why is it important?
+      placeholder: |
+        Describe the specific problem or pain point this feature addresses:
+        - What are users currently unable to do?
+        - How does this impact user experience or business goals?
+        - What evidence supports this need? (user feedback, data, support tickets)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: user_segment
+    attributes:
+      label: Primary User Segment
+      description: Which users will primarily benefit from this feature?
+      options:
+        - New Users (onboarding, first-time experience)
+        - Premium Users (paid subscribers, advanced features)
+        - Free Users (basic tier, conversion opportunities)  
+        - Admin Users (administrative functions)
+        - Power Users (advanced functionality, heavy usage)
+        - Mobile Users (mobile-specific needs)
+        - Enterprise Users (business/organizational needs)
+        - Internal Users (support, sales, internal tools)
+        - All Users (universal benefit)
+        - Other (please specify in description)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: business_priority
+    attributes:
+      label: Business Priority
+      description: How important is this feature to business objectives?
+      options:
+        - P0 - Critical (blocks launch, must-have)
+        - P1 - High (important for user experience and business goals)
+        - P2 - Medium (valuable but can be delayed if needed)
+        - P3 - Low (nice to have, lowest priority)
+        - Unknown (Product Manager will assess)
+    validations:
+      required: true
+
+  - type: textarea
+    id: user_stories
+    attributes:
+      label: User Stories
+      description: Describe what users want to do with this feature
+      placeholder: |
+        Write user stories in this format:
+        
+        **Story 1:**
+        As a [user type], I want [specific capability] so that [business value/benefit]
+        
+        **Story 2:**
+        As a [user type], I want [specific capability] so that [business value/benefit]
+        
+        Include the most important user scenarios, focusing on the "why" behind each story.
+    validations:
+      required: true
+
+  - type: textarea
+    id: success_criteria
+    attributes:
+      label: Success Criteria
+      description: How will we know this feature is successful?
+      placeholder: |
+        Define measurable success criteria:
+        - User adoption rate: X% of target users use this feature within 30 days
+        - Task completion: Users can complete [specific task] in less than X seconds
+        - Business metric: Increase in [conversion/retention/engagement] by X%
+        - User satisfaction: Feature rated X/5 or higher in user feedback
+    validations:
+      required: true
+
+  - type: dropdown
+    id: timeline_expectation
+    attributes:
+      label: Timeline Expectation
+      description: When do you need this feature?
+      options:
+        - ASAP (next sprint, urgent business need)
+        - Next Release (within 4-6 weeks)
+        - This Quarter (within 3 months)
+        - Next Quarter (3-6 months)
+        - This Year (within 12 months)
+        - No Rush (whenever capacity allows)
+    validations:
+      required: true
+
+  - type: textarea
+    id: business_justification
+    attributes:
+      label: Business Justification
+      description: Why should we prioritize this feature over others?
+      placeholder: |
+        Provide business case for this feature:
+        - Revenue impact: Will this generate revenue, prevent churn, or reduce costs?
+        - User impact: How many users affected and how significantly?
+        - Strategic value: How does this support company/product strategy?
+        - Competitive advantage: Does this differentiate us in the market?
+        - Risk mitigation: What risks does this reduce or prevent?
+
+  - type: textarea
+    id: constraints_assumptions
+    attributes:
+      label: Known Constraints & Assumptions
+      description: Are there any limitations, dependencies, or assumptions we should know about?
+      placeholder: |
+        Document any constraints or assumptions:
+        
+        **Technical Constraints:**
+        - Integration requirements with existing systems
+        - Performance requirements or limitations
+        - Browser/device compatibility needs
+        
+        **Business Constraints:**  
+        - Budget limitations
+        - Timeline constraints
+        - Regulatory/legal requirements
+        
+        **Assumptions:**
+        - User behavior assumptions
+        - Market/competitive assumptions
+        - Technical capability assumptions
+
+  - type: textarea
+    id: supporting_evidence
+    attributes:
+      label: Supporting Evidence
+      description: What evidence supports this feature request?
+      placeholder: |
+        Provide supporting evidence:
+        - User research findings
+        - Customer feedback or support tickets
+        - Usage data or analytics
+        - Competitive analysis
+        - Market research
+        - Sales feedback
+        - Internal stakeholder input
+        
+        Include links to research, data, or feedback sources when possible.
+
+  - type: checkboxes
+    id: stakeholder_alignment
+    attributes:
+      label: Stakeholder Alignment
+      description: Have you discussed this feature request with relevant stakeholders?
+      options:
+        - label: Discussed with users or customers who would benefit
+        - label: Validated with business stakeholders (sales, marketing, etc.)
+        - label: Considered impact on support/operations teams  
+        - label: Reviewed with engineering for initial feasibility
+        - label: Aligned with current product strategy and roadmap
+
+  - type: dropdown
+    id: complexity_estimate
+    attributes:
+      label: Estimated Complexity
+      description: How complex do you think this feature is to implement?
+      options:
+        - Small (simple UI changes, minor functionality)
+        - Medium (new UI components, moderate backend changes)
+        - Large (significant new functionality, multiple system changes)
+        - Extra Large (major feature, requires architecture changes)
+        - Unknown (needs technical assessment)
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Any other information that would help evaluate this feature request?
+      placeholder: |
+        Include any additional context:
+        - Related features or dependencies
+        - Alternative solutions considered
+        - Competitive features or benchmarks
+        - User workflow context
+        - Technical considerations
+        - Mockups, sketches, or examples (paste images or links)
+
+  - type: checkboxes
+    id: intake_acknowledgment
+    attributes:
+      label: Process Acknowledgment
+      description: Please acknowledge understanding of our feature development process
+      options:
+        - label: I understand this request will be reviewed by a Product Manager who may request additional information
+          required: true
+        - label: I understand that not all feature requests will be prioritized for development  
+          required: true
+        - label: I am available to provide clarification and additional input during the requirements phase
+          required: true
+        - label: I understand that approved features will go through a systematic 6-phase development process
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        ## 🔄 What Happens Next?
+        
+        1. **Product Manager Assignment** - A PM will be assigned to review this request
+        2. **Initial Assessment** - PM will evaluate priority and feasibility  
+        3. **Requirements Phase** - If approved, detailed requirements will be gathered
+        4. **Development Pipeline** - Feature enters our 6-phase development process
+        5. **Progress Updates** - You'll receive updates via this GitHub issue
+        
+        **Expected Response Time**: 3-5 business days for initial PM review
+        
+        **Track Progress**: Monitor the [Feature Development Tracker](../docs/feature-tracker.md)
+        
+        Thank you for contributing to our product development! 🚀

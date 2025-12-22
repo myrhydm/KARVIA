@@ -1,0 +1,28 @@
+# Ignore environment files
+.env
+.env.*
+!.env.example
+node_modules
+.DS_Store
+
+# Test files and temporary data
+test/mongo-binaries/mongod-*
+*.test.js
+!server/api/**/*.test.js
+debug-*.html
+test-*.js
+test-*.html
+TEST_*.js
+TEST_*.html
+create-test-user.js
+
+# MongoDB memory server binaries
+**/mongo-binaries/mongod-*
+
+# Documentation (temporary)
+*.md
+!README.md
+docs/pitch-deck/archive/
+.bramhi.log
+.bramhi.run.log
+.bramhi.run.pid

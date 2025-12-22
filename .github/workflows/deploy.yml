@@ -1,0 +1,41 @@
+name: Deploy to Render - Integration Hub
+on:
+  push:
+    branches: [main]
+    paths:
+      # goaltracker_test runtime includes
+      - 'server/**'
+      - 'client/**'
+      # Universal excludes
+      - '!docs/**'
+      - '!pm/**'
+      - '!architect/**'
+      - '!designer/**'
+      - '!developer/**'
+      - '!qa/**'
+      - '!ops/**'
+      - '!logs/**'
+      - '!.github/**'
+      - '!*.md'
+      - '!tests/**'
+
+jobs:
+  deploy:
+    if: ${{ !contains(github.event.head_commit.message, '[skip deploy]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y jq
+
+      - name: Deploy to Render
+        run: |
+          echo "🚀 Deploying Integration Hub to Render..."
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+          echo "✅ Integration Hub deploy triggered successfully"
+
+      - name: Log Deployment
+        run: |
+          echo "$(date -Iseconds): Deployed ${{ github.sha }} from ${{ github.ref_name }}" >> deployment.log
+          echo "Files changed: ${{ toJson(github.event.commits[0].added) }}" >> deployment.log

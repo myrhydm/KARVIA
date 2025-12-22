@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1.0.0",
+  "messageId": "98765432-5432-9876-edcb-fedcba987654",
+  "correlationId": "FT-555",
+  "timestamp": "2025-09-03T18:59:00.000Z",
+  "expiresAt": "2025-09-03T19:59:00.000Z",
+  "fromAgent": "SYNTH",
+  "toAgent": "CODEX",
+  "messageType": "HANDOFF",
+  "sequence": 0,
+  "env": "dev",
+  "delivery": {
+    "idempotencyKey": "FT-555:SYNTH:0",
+    "retry": 0,
+    "ttlSec": 3600
+  },
+  "agent": {
+    "version": "synth@1.0.0",
+    "model": "gpt-4"
+  },
+  "payload": {
+    "status": "COMPLETED",
+    "artifacts": [
+      {
+        "name": "design-specification.json",
+        "uri": "repo://artifacts/FT-555/design-specification.json",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "mediaType": "application/json",
+        "sizeBytes": 1024
+      },
+      {
+        "name": "api-specification.json",
+        "uri": "repo://artifacts/FT-555/api-specification.json",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "mediaType": "application/json",
+        "sizeBytes": 2048
+      },
+      {
+        "name": "database-schema.json",
+        "uri": "repo://artifacts/FT-555/database-schema.json",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "mediaType": "application/json",
+        "sizeBytes": 1536
+      },
+      {
+        "name": "component-specifications.json",
+        "uri": "repo://artifacts/FT-555/component-specifications.json",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "mediaType": "application/json",
+        "sizeBytes": 3072
+      }
+    ]
+  }
+}

@@ -1,0 +1,205 @@
+# Frontend CI Gates - Production-Hardy Version
+# Drop-in snippets that work across frameworks/monorepos
+
+# 0) Build + detect dist dir (run before gates)
+- name: Build app (if not already built)
+  run: |
+    if [ -f package.json ]; then
+      npm run build || echo "⚠️ Build failed or not defined; ensure the app is built before running FE gates"
+    fi
+
+- name: Detect dist directory
+  id: distdir
+  run: |
+    for d in build dist .next/static dist/assets; do
+      if [ -d "$d" ]; then echo "dir=$d" >> "$GITHUB_OUTPUT"; exit 0; fi
+    done
+    echo "dir=" >> "$GITHUB_OUTPUT"; echo "⚠️ No dist directory found"; exit 0
+
+# 1) Lighthouse CI (no glob dependency)
+- name: Lighthouse CI
+  run: |
+    # Use static mode if we have a dist dir; otherwise skip gracefully
+    if [ -n "${{ steps.distdir.outputs.dir }}" ]; then
+      npx @lhci/cli autorun --upload.target=filesystem --collect.staticDistDir="${{ steps.distdir.outputs.dir }}" || true
+    else
+      echo "⚠️ No dist dir; LHCI skipped (consider running against a started server with --collect.url)"
+      exit 0
+    fi
+
+    node - <<'JS'
+    const fs = require('fs');
+    const dir = '.lighthouseci';
+    if (!fs.existsSync(dir)) { console.log('⚠️ No .lighthouseci output; skipped'); process.exit(0); }
+    const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+    let allPass = true;
+    for (const f of files) {
+      const d = JSON.parse(fs.readFileSync(`${dir}/${f}`));
+      const c = d.summary && d.summary.categories || {};
+      const perf = c.performance?.score ?? 0;
+      const a11y = c.accessibility?.score ?? 0;
+      const pass = perf >= 0.90 && a11y >= 0.95;
+      console.log(`${f}: Perf=${perf.toFixed(2)} A11y=${a11y.toFixed(2)} ${pass?'✅':'❌'}`);
+      if (!pass) allPass = false;
+    }
+    if (!allPass) { console.error('❌ Lighthouse gates failed'); process.exit(1); }
+    console.log('✅ All Lighthouse gates passed');
+    JS
+
+# 2) Bundle budgets (Brotli preferred, multi-dir, env overrides)
+- name: Check bundle budgets
+  env:
+    CORE_MAX_KB: 250   # override in repo/env as needed
+    CHUNK_MAX_KB: 100
+  run: |
+    node - <<'JS'
+    const fs=require('fs'), path=require('path'), z=require('zlib');
+    const br = z.brotliCompressSync ? (b=>z.brotliCompressSync(b).length) : null;
+    const gz = b=>z.gzipSync(b).length;
+
+    const CORE_MAX = (parseInt(process.env.CORE_MAX_KB||'250')*1024);
+    const CHUNK_MAX = (parseInt(process.env.CHUNK_MAX_KB||'100')*1024);
+
+    const candidates = [process.env.DISTDIR, '${{ steps.distdir.outputs.dir }}', 'build', 'dist', '.next/static', 'dist/assets'].filter(Boolean);
+    let root = candidates.find(d => d && fs.existsSync(d));
+    if (!root) { console.log('⚠️ No dist directory; skipping budget check'); process.exit(0); }
+
+    let ok=true, msgs=[];
+    function walk(d){
+      for (const f of fs.readdirSync(d)) {
+        const p=path.join(d,f);
+        const s=fs.statSync(p);
+        if (s.isDirectory()) walk(p);
+        else check(p);
+      }
+    }
+    function size(buf){ try { return br ? br(buf) : gz(buf); } catch { return gz(buf); } }
+    function check(p){
+      if (!/\.(js|css)$/.test(p)) return;
+      const label = /\/(main|vendors|app|runtime)[.-]/.test(p) ? 'CORE' : 'CHUNK';
+      const limit = label==='CORE' ? CORE_MAX : CHUNK_MAX;
+      const bytes = size(fs.readFileSync(p));
+      const kb = (bytes/1024).toFixed(1);
+      if (bytes > limit) { ok=false; msgs.push(`❌ ${label} ${path.basename(p)}: ${kb}KB > ${(limit/1024).toFixed(1)}KB`); }
+      else { console.log(`✅ ${label} ${path.basename(p)}: ${kb}KB`); }
+    }
+    walk(root);
+    if (!ok){ console.error('\n❌ Bundle budget failed:\n' + msgs.join('\n')); process.exit(1); }
+    console.log('\n✅ All bundle budgets passed');
+    JS
+
+# 3) Storybook coverage (adds *.stories.mdx + monorepo packages)
+- name: Check Storybook coverage ≥90%
+  run: |
+    node - <<'JS'
+    const glob = require('fast-glob');
+    const componentGlobs = [
+      'src/components/**/index.@(ts|tsx|js|jsx)',
+      'client/components/**/index.@(ts|tsx|js|jsx)',
+      'packages/*/src/components/**/index.@(ts|tsx|js|jsx)'
+    ];
+    const storyGlobs = [
+      'src/components/**/*.stories.@(ts|tsx|js|jsx|mdx)',
+      'client/components/**/*.stories.@(ts|tsx|js|jsx|mdx)',
+      'packages/*/src/components/**/*.stories.@(ts|tsx|js|jsx|mdx)',
+      '.storybook/**/*.stories.@(ts|tsx|js|jsx|mdx)'
+    ];
+
+    const components = new Set(glob.sync(componentGlobs));
+    const stories = new Set(glob.sync(storyGlobs).map(s => s.replace(/\/[^/]*\.stories\.\w+$/, '').replace(/\/stories$/, '')));
+
+    const compDirs = new Set([...components].map(c=>c.replace(/\/index\.\w+$/, '')));
+    let withStories=0;
+    for (const c of compDirs) {
+      const has = stories.has(c) || [...stories].some(s=>s.startsWith(c));
+      if (has) withStories++; else console.log(`⚠️ Missing story: ${c}`);
+    }
+    const cov = compDirs.size ? withStories/compDirs.size : 1;
+    const pct = (cov*100).toFixed(1);
+    console.log(`📊 Storybook coverage: ${withStories}/${compDirs.size} = ${pct}%`);
+    if (cov < 0.90) { console.error(`❌ Coverage ${pct}% < 90%`); process.exit(1); }
+    console.log('✅ Storybook coverage passed');
+    JS
+
+# 4) TypeScript strict + enforce config toggle
+- name: TypeScript strict check
+  run: |
+    if [ -f tsconfig.json ]; then
+      npx tsc --noEmit --strict
+      jq -e '.compilerOptions.strict==true' tsconfig.json >/dev/null 2>&1 || { echo "❌ tsconfig.json missing \"strict\": true"; exit 1; }
+      echo "✅ TypeScript strict check passed"
+    else
+      echo "⚠️ No tsconfig.json found, skipping TypeScript check"
+    fi
+
+# 5) Security headers (works with Next.js + custom configs)
+- name: Security headers check
+  run: |
+    if [ -f security.config.js ]; then
+      node - <<'JS'
+      const cfg=require('./security.config.js');
+      const need=['Content-Security-Policy','X-Frame-Options','X-Content-Type-Options'];
+      const missing=need.filter(h=>!(cfg.headers||{})[h]);
+      if(missing.length){ console.error('❌ Missing security headers: '+missing.join(', ')); process.exit(1); }
+      console.log('✅ Security headers configured');
+      JS
+    elif [ -f next.config.js ]; then
+      node - <<'JS'
+      const conf=require('./next.config.js');
+      const hdrs=conf.headers;
+      if (typeof hdrs!=='function'){ console.log('⚠️ next.config.js without headers(); skipping'); process.exit(0); }
+      (async () => {
+        const res = await hdrs();
+        const applied = new Set(res.flatMap(r=>r.headers.map(h=>h.key)));
+        const need=['Content-Security-Policy','X-Frame-Options','X-Content-Type-Options'];
+        const missing=need.filter(h=>!applied.has(h));
+        if(missing.length){ console.error('❌ Missing security headers: '+missing.join(', ')); process.exit(1); }
+        console.log('✅ Security headers present via Next.js config');
+      })();
+      JS
+    else
+      echo "⚠️ No security config found, skipping security headers check"
+    fi
+
+# 6) Additional API client compliance check (optional)
+- name: API client compliance check
+  run: |
+    node - <<'JS'
+    const fs=require('fs');
+    const glob=require('fast-glob');
+    const files=glob.sync(['src/**/*.@(ts|tsx|js|jsx)', 'client/**/*.@(ts|tsx|js|jsx)']);
+    let violations=[];
+    
+    for(const file of files){
+      const content=fs.readFileSync(file, 'utf8');
+      const lines=content.split('\n');
+      
+      lines.forEach((line,idx)=>{
+        // Check for direct fetch usage in components (not in utils/services)
+        if(/fetch\s*\(/.test(line) && !file.includes('/api/') && !file.includes('/utils/') && !file.includes('/services/')){
+          violations.push(`${file}:${idx+1} - Direct fetch usage in component`);
+        }
+        
+        // Check for XMLHttpRequest
+        if(/XMLHttpRequest/.test(line)){
+          violations.push(`${file}:${idx+1} - XMLHttpRequest usage (use typed client)`);
+        }
+      });
+    }
+    
+    if(violations.length>0){
+      console.error('❌ API client compliance violations:');
+      violations.forEach(v=>console.error(`  ${v}`));
+      console.error('\nUse typed API clients instead of direct fetch calls');
+      process.exit(1);
+    }
+    
+    console.log('✅ API client compliance check passed');
+    JS
+
+# Usage Notes:
+# - Add @lhci/cli and fast-glob to devDependencies if not present
+# - For SSR apps, consider LHCI with --collect.url=http://localhost:3000
+# - In monorepos, run with working-directory matrix over each app package  
+# - Override budgets with CORE_MAX_KB and CHUNK_MAX_KB environment variables
+# - Ensure jq is available in CI environment (usually pre-installed in GitHub Actions)

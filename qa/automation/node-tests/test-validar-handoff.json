@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "1.0.0",
+  "messageId": "validar-test-001-4321-8765-dcba-987654321dcb",
+  "correlationId": "FT-555",
+  "timestamp": "2025-09-03T19:10:00.000Z",
+  "expiresAt": "2025-09-03T21:10:00.000Z",
+  "fromAgent": "CODEX",
+  "toAgent": "VALIDAR",
+  "messageType": "HANDOFF",
+  "sequence": 0,
+  "env": "dev",
+  "delivery": {
+    "idempotencyKey": "FT-555:CODEX:0",
+    "retry": 0,
+    "ttlSec": 3600
+  },
+  "agent": {
+    "version": "codex@1.0.0",
+    "model": "gpt-4"
+  },
+  "payload": {
+    "status": "COMPLETED",
+    "artifacts": [
+      {
+        "name": "frontend-components.json",
+        "uri": "repo://artifacts/FT-555/frontend-components.json",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "mediaType": "application/json",
+        "sizeBytes": 7588
+      },
+      {
+        "name": "backend-api.json",
+        "uri": "repo://artifacts/FT-555/backend-api.json",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "mediaType": "application/json",
+        "sizeBytes": 4966
+      },
+      {
+        "name": "database-migrations.json",
+        "uri": "repo://artifacts/FT-555/database-migrations.json",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "mediaType": "application/json",
+        "sizeBytes": 635
+      },
+      {
+        "name": "test-cases.json",
+        "uri": "repo://artifacts/FT-555/test-cases.json",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "mediaType": "application/json",
+        "sizeBytes": 2188
+      },
+      {
+        "name": "deployment-config.json",
+        "uri": "repo://artifacts/FT-555/deployment-config.json",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "mediaType": "application/json",
+        "sizeBytes": 1750
+      }
+    ]
+  }
+}

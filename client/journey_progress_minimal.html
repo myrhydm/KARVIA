@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journey Progress - Minimal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <h1 class="text-2xl font-bold mb-4">Journey Progress</h1>
+        
+        <!-- Stage Indicator -->
+        <div class="bg-white rounded-lg shadow p-4 mb-4">
+            <div id="stage-indicator" class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium text-center mb-2">
+                Loading...
+            </div>
+            <div id="daily-message" class="text-sm text-gray-600 text-center">
+                Loading your journey...
+            </div>
+        </div>
+
+        <!-- Discovery Metrics -->
+        <div class="bg-white rounded-lg shadow p-4 mb-4">
+            <h3 class="font-semibold mb-3">Your Progress</h3>
+            <div id="discovery-metrics" class="space-y-2">
+                <div class="flex justify-between">
+                    <span>Overall Score:</span>
+                    <span id="overall-score">0%</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Current Focus:</span>
+                    <span id="current-focus">Dream Connection</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Login Streak:</span>
+                    <span id="login-streak-score">0%</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Dream Engagement:</span>
+                    <span id="dream-engagement-score">0%</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Emotional Connection:</span>
+                    <span id="emotional-connection-score">0%</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Completion Rate:</span>
+                    <span id="completion-rate-score">0%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Dream -->
+        <div class="bg-white rounded-lg shadow p-4 mb-4">
+            <h3 class="font-semibold mb-3">Your Dream</h3>
+            <div id="user-dream" class="text-gray-600 italic">
+                Loading your dream...
+            </div>
+        </div>
+
+        <!-- Progress -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <h3 class="font-semibold mb-3">Stage Progression</h3>
+            <div class="flex justify-between mb-2">
+                <span>Progress to Next Stage:</span>
+                <span id="progression-percentage">0%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+                <div id="progression-bar" class="bg-purple-500 h-2 rounded-full" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="loading-status" class="text-center mt-4 text-gray-600">
+            Loading...
+        </div>
+    </div>
+
+    <script>
+        class MinimalJourneyProgress {
+            constructor() {
+                this.apiBase = '/api/engines';
+                this.init();
+            }
+
+            async init() {
+                try {
+                    document.getElementById('loading-status').textContent = 'Loading your journey...';
+                    
+                    // Check auth
+                    const token = localStorage.getItem('authToken');
+                    if (!token) {
+                        document.getElementById('loading-status').textContent = 'Please login first';
+                        return;
+                    }
+
+                    // Load scores
+                    await this.loadScores();
+                    
+                    document.getElementById('loading-status').textContent = 'Journey loaded successfully!';
+                    
+                } catch (error) {
+                    console.error('Error loading journey:', error);
+                    document.getElementById('loading-status').textContent = `Error: ${error.message}`;
+                }
+            }
+
+            async loadScores() {
+                const token = localStorage.getItem('authToken');
+                const response = await fetch(`${this.apiBase}/scoring/user-scores`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('Received data:', data);
+                
+                this.displayStageData(data);
+            }
+
+            displayStageData(data) {
+                // Update stage indicator
+                const stageIndicator = document.getElementById('stage-indicator');
+                if (stageIndicator) {
+                    stageIndicator.textContent = data.stage === 'discovery' ? 'Discovery Stage' : 'Onboarding Stage';
+                    stageIndicator.className = `bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium text-center mb-2`;
+                }
+
+                // Update daily message
+                const dailyMessage = document.getElementById('daily-message');
+                if (dailyMessage) {
+                    dailyMessage.textContent = data.stage === 'discovery' ? 
+                        'Ready to visit your dream today?' : 
+                        'Time to develop your skills and clarity.';
+                }
+
+                // Update scores
+                if (data.stage === 'discovery' && data.stageProfile.metrics) {
+                    this.updateElement('overall-score', `${Math.round(data.stageProfile.overallScore)}%`);
+                    this.updateElement('current-focus', 'Dream Connection');
+                    this.updateElement('login-streak-score', `${Math.round(data.stageProfile.metrics.loginStreak * 100)}%`);
+                    this.updateElement('dream-engagement-score', `${Math.round(data.stageProfile.metrics.dreamEngagement * 100)}%`);
+                    this.updateElement('emotional-connection-score', `${Math.round(data.stageProfile.metrics.emotionalConnection * 100)}%`);
+                    this.updateElement('completion-rate-score', `${Math.round(data.stageProfile.metrics.completionRate * 100)}%`);
+                }
+
+                // Update progression
+                this.updateElement('progression-percentage', `${Math.round(data.stageProfile.progressionPercentage)}%`);
+                const progressBar = document.getElementById('progression-bar');
+                if (progressBar) {
+                    progressBar.style.width = `${data.stageProfile.progressionPercentage}%`;
+                }
+            }
+
+            updateElement(id, text) {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = text;
+                } else {
+                    console.warn(`Element with id '${id}' not found`);
+                }
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new MinimalJourneyProgress();
+        });
+    </script>
+</body>
+</html>

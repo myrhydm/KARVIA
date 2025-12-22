@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karvia - Focus on Task</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: white;
+            min-height: 100vh;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .nav-brand {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        #timer-display { font-variant-numeric: tabular-nums; }
+    </style>
+</head>
+<body>
+    <!-- Navigation will be injected by navigation.js -->
+    <main class="py-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex gap-6 h-[calc(100vh-14rem)]">
+                <!-- Left Panel: Task Information (30%) -->
+                <div class="w-[30%] bg-white shadow-lg rounded-lg overflow-hidden flex flex-col">
+                    <!-- Task Header -->
+                    <div class="p-4 text-center border-b border-gray-200">
+                        <h1 id="task-name" class="text-xl font-bold text-gray-900 mb-1">Loading Task...</h1>
+                        <div id="current-day-date-task" class="text-xs text-indigo-600 font-medium"></div>
+                    </div>
+
+                    <!-- Timer Section -->
+                    <div class="p-6 text-center border-b border-gray-200">
+                        <div id="timer-display" class="text-5xl font-bold text-indigo-600 mb-4">00:00:00</div>
+                        <div id="timer-controls" class="flex justify-center gap-2">
+                            <button id="start-btn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">Start</button>
+                            <button id="pause-btn" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-lg hidden">Pause</button>
+                            <button id="reset-btn" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-medium rounded-lg">Reset</button>
+                        </div>
+                    </div>
+
+                    <!-- Task Info -->
+                    <div class="p-4 border-b border-gray-200 space-y-3">
+                        <div class="text-center">
+                            <h3 class="text-sm font-semibold text-gray-700 mb-2">📊 Task Details</h3>
+                        </div>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">⏱️ Estimated:</span>
+                                <span id="task-est-time" class="font-medium text-gray-900">--</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">📚 Difficulty:</span>
+                                <span id="task-difficulty" class="font-medium text-gray-900">--</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">🎯 Goal:</span>
+                                <span id="task-goal" class="font-medium text-gray-900 truncate ml-2 max-w-[120px]">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Task Context (Scrollable) -->
+                    <div class="flex-1 p-4 overflow-y-auto border-b border-gray-200">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-2">💡 Why This Matters</h3>
+                        <p id="task-rationale" class="text-xs text-gray-600 leading-relaxed mb-3">Loading context...</p>
+                        
+                        <div id="metrics-impact" class="mb-3">
+                            <!-- Metrics will be populated -->
+                        </div>
+                        
+                        <div id="familiarity-section" class="hidden">
+                            <p class="text-xs text-gray-600 mb-2">Your familiarity:</p>
+                            <div class="flex gap-1">
+                                <button class="familiarity-btn px-2 py-1 text-xs rounded bg-gray-200 hover:bg-green-200" data-value="know_this">Know it</button>
+                                <button class="familiarity-btn px-2 py-1 text-xs rounded bg-gray-200 hover:bg-yellow-200" data-value="somewhat_familiar">Some</button>
+                                <button class="familiarity-btn px-2 py-1 text-xs rounded bg-gray-200 hover:bg-red-200" data-value="no_idea">New</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div id="action-buttons" class="p-4 bg-gray-50 space-y-2">
+                        <button id="complete-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-3 rounded-lg text-sm">✅ Complete Task</button>
+                        <button id="postpone-btn" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 rounded-lg text-sm">⏳ Postpone</button>
+                    </div>
+                </div>
+                
+                <!-- Right Panel: Smart Task Assistant (80%) -->
+                <div class="w-[80%] bg-white shadow-lg rounded-lg overflow-hidden flex flex-col">
+                    <!-- Assistant Header -->
+                    <div class="p-4 border-b border-gray-100 bg-indigo-50">
+                        <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                            <svg class="w-6 h-6 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.955 8.955 0 01-5.199-1.645L3 21l2.645-5.801C3.045 17.644 3 15.837 3 12c0-4.418 3.582-8 8-8s8 3.582 8 8z"></path>
+                            </svg>
+                            Smart Task Assistant
+                        </h2>
+                        <p class="text-sm text-gray-600 mt-1">Ask me anything about this task</p>
+                    </div>
+                    
+                    <!-- Chat Messages Area -->
+                    <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50">
+                        <!-- Initial greeting will be added here by JavaScript -->
+                    </div>
+                    
+                    <!-- Chat Input -->
+                    <div class="p-4 border-t border-gray-200 bg-white">
+                        <div class="flex gap-3">
+                            <input 
+                                type="text" 
+                                id="chat-input" 
+                                placeholder="Ask about this task..." 
+                                class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            >
+                            <button 
+                                id="chat-send-btn" 
+                                class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors"
+                            >
+                                Send
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completion Feedback Modal -->
+        <div id="completion-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
+            <div class="bg-white rounded-lg max-w-md w-full p-6">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">🎉 Task Completed!</h3>
+                
+                <div class="space-y-4">
+                    <!-- Value Rating -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">How valuable was this task?</label>
+                        <div class="flex gap-1" id="value-rating">
+                            <button class="value-star text-2xl text-gray-300 hover:text-yellow-400" data-value="1">⭐</button>
+                            <button class="value-star text-2xl text-gray-300 hover:text-yellow-400" data-value="2">⭐</button>
+                            <button class="value-star text-2xl text-gray-300 hover:text-yellow-400" data-value="3">⭐</button>
+                            <button class="value-star text-2xl text-gray-300 hover:text-yellow-400" data-value="4">⭐</button>
+                            <button class="value-star text-2xl text-gray-300 hover:text-yellow-400" data-value="5">⭐</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Difficulty Rating -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Difficulty compared to expected:</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button class="difficulty-btn px-3 py-2 text-sm rounded border hover:bg-gray-50" data-value="much_easier">Much Easier</button>
+                            <button class="difficulty-btn px-3 py-2 text-sm rounded border hover:bg-gray-50" data-value="easier">Easier</button>
+                            <button class="difficulty-btn px-3 py-2 text-sm rounded border hover:bg-gray-50" data-value="as_expected">As Expected</button>
+                            <button class="difficulty-btn px-3 py-2 text-sm rounded border hover:bg-gray-50" data-value="harder">Harder</button>
+                        </div>
+                        <button class="difficulty-btn w-full mt-2 px-3 py-2 text-sm rounded border hover:bg-gray-50" data-value="much_harder">Much Harder</button>
+                    </div>
+                    
+                    <!-- Notes -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Any notes about this task? (optional)</label>
+                        <textarea id="completion-notes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md resize-none" placeholder="How did it go? Any insights or thoughts?"></textarea>
+                    </div>
+                    
+                    <!-- Modal Actions -->
+                    <div class="flex gap-3 pt-4">
+                        <button id="skip-feedback-btn" class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">Skip</button>
+                        <button id="submit-feedback-btn" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50" disabled>Submit</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    </main>
+    <script src="pages/scripts/utils.js"></script>
+    <script src="pages/scripts/navigation.js"></script>
+    <script src="pages/scripts/tasks.js"></script>
+</body>
+</html>

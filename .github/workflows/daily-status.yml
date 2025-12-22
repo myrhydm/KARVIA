@@ -1,0 +1,66 @@
+name: Daily Status Report
+on:
+  schedule:
+    - cron: '0 9 * * *'  # 9 AM UTC daily
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  generate-daily-status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y jq
+
+      - name: Generate Daily Status
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%S.%03NZ")
+          
+          # Count pipeline features
+          TOTAL_FEATURES=$(find logs/pipeline/ -name "FT-*.json" | wc -l)
+          ACTIVE_FEATURES=$(find logs/pipeline/ -name "FT-*.json" -exec jq -r 'select(.currentStage != "completed" and .currentStage != "cancelled") | .featureId' {} \; | wc -l)
+          
+          # Generate daily report
+          cat > "daily/$DATE.md" <<EOF
+          # Daily Status Report - $DATE
+          
+          ## 📊 Pipeline Overview
+          - **Total Features**: $TOTAL_FEATURES
+          - **Active Features**: $ACTIVE_FEATURES
+          - **Features in Development**: $(find logs/pipeline/ -name "FT-*.json" -exec jq -r 'select(.currentStage == "development") | .featureId' {} \; | wc -l)
+          - **Features in QA**: $(find logs/pipeline/ -name "FT-*.json" -exec jq -r 'select(.currentStage == "qa") | .featureId' {} \; | wc -l)
+          - **Features Ready for Release**: $(find logs/pipeline/ -name "FT-*.json" -exec jq -r 'select(.currentStage == "release") | .featureId' {} \; | wc -l)
+          
+          ## 🎯 Active Features
+          EOF
+          
+          # List active features
+          if [ "$ACTIVE_FEATURES" -gt 0 ]; then
+            find logs/pipeline/ -name "FT-*.json" -exec jq -r 'select(.currentStage != "completed" and .currentStage != "cancelled") | "- **\(.featureId)**: \(.title) (Stage: \(.currentStage))"' {} \; >> "daily/$DATE.md"
+          else
+            echo "- No active features" >> "daily/$DATE.md"
+          fi
+          
+          cat >> "daily/$DATE.md" <<EOF
+          
+          ## 📈 Metrics
+          - **Report Generated**: $TIMESTAMP
+          - **System Status**: Operational
+          - **Automation**: Active
+          
+          ---
+          *Generated automatically by 3-Repo Streamlining System*
+          EOF
+
+      - name: Commit Daily Report
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git pull --rebase origin main  # Prevent race conditions
+          git add daily/
+          git commit -m "Daily status: $(date +%Y-%m-%d) [skip deploy]" || echo "No changes to daily status"
+          git push

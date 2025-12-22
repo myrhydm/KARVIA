@@ -1,0 +1,134 @@
+name: Pipeline Intake Sync
+on:
+  issues:
+    types: [opened, labeled, edited, closed, reopened]
+
+concurrency:
+  group: pipeline-intake-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    # Run on requirements issues, and always run when closing to finalize state
+    if: contains(github.event.issue.labels.*.name, 'stage:requirements') || github.event.action == 'closed' || github.event.action == 'reopened'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install jq
+        run: sudo apt-get update -y && sudo apt-get install -y jq
+
+      - name: Build pipeline JSON
+        id: build_json
+        env:
+          ISSUE_JSON: ${{ toJson(github.event.issue) }}
+          ISSUE_ACTION: ${{ github.event.action }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p logs/pipeline
+
+          # Extract FT-### from title or labels
+          FEATURE_ID=$(echo "$ISSUE_JSON" | jq -r '.title' | sed -n 's/.*\(FT-[0-9]\+\).*/\1/p')
+          if [ -z "${FEATURE_ID:-}" ]; then
+            FEATURE_ID=$(echo "$ISSUE_JSON" | jq -r '.labels[].name? // empty' | grep -Eo 'FT-[0-9]+' | head -n1 || true)
+          fi
+          if [ -z "${FEATURE_ID:-}" ]; then
+            echo "No FT-### found in title/labels, skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "feature_id=$FEATURE_ID" >> "$GITHUB_OUTPUT"
+
+          FILE="logs/pipeline/${FEATURE_ID}.json"
+          NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          TITLE=$(echo "$ISSUE_JSON" | jq -r '.title')
+          STATE=$(echo "$ISSUE_JSON" | jq -r '.state')
+
+          # Extract targets (scope:*) and data classification (data:*)
+          TARGETS=$(echo "$ISSUE_JSON" | jq -r '[.labels[].name? | select(test("^scope:")) | sub("^scope:";"")]')
+          DATA_CLASS=$(echo "$ISSUE_JSON" | jq -r '([.labels[].name? | select(test("^data:")) | sub("^data:";"")][0]) // "internal"')
+
+          if [ "$STATE" = "closed" ]; then
+            # Finalize if file exists; otherwise skip gracefully
+            if [ ! -f "$FILE" ]; then
+              echo "Issue closed but no pipeline file yet; skipping."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            IS_CANCELLED=$(echo "$ISSUE_JSON" | jq -r '[.labels[].name? | contains("cancelled")] | any')
+            NEW_STAGE=$([ "$IS_CANCELLED" = "true" ] && echo "cancelled" || echo "completed")
+
+            jq --arg now "$NOW" --arg stage "$NEW_STAGE" '
+              .lastUpdated = $now
+              | .currentStage = $stage
+              | .intake_completed_at = ($stage | IN("completed","cancelled") ? $now : .)
+              | .stageHistory += [{stage:$stage, status:"closed", startedAt:$now}]
+            ' "$FILE" > tmp && mv tmp "$FILE"
+          else
+            if [ -f "$FILE" ]; then
+              jq --arg t "$TITLE" --arg now "$NOW" --argjson targets "$TARGETS" --arg dc "$DATA_CLASS" '
+                .title = $t
+                | .lastUpdated = $now
+                | (if ($targets|length)>0 then .targets=$targets else . end)
+                | .data_classification = $dc
+                | .currentStage = "requirements"
+              ' "$FILE" > tmp && mv tmp "$FILE"
+            else
+              jq -n --arg id "$FEATURE_ID" --arg t "$TITLE" --arg now "$NOW" --argjson targets "$TARGETS" --arg dc "$DATA_CLASS" '
+                {
+                  featureId:$id, title:$t, type:"feature", priority:"medium",
+                  priority_score:0,
+                  targets:(if ($targets|length)==0 then ["integration"] else $targets end),
+                  currentStage:"requirements",
+                  createdAt:$now, lastUpdated:$now,
+                  intake_started_at:$now, intake_completed_at:null,
+                  created_by:env.GITHUB_ACTOR // "@unknown",
+                  requester:null, okr_links:[],
+                  data_classification:$dc,
+                  duplicate_of:null, epic:null,
+                  decision:{
+                    business_value:"medium", technical_feasibility:"medium",
+                    resource_availability:"true", strategic_alignment:"medium",
+                    risk_level:"low"
+                  },
+                  stageHistory:[{stage:"requirements", status:"open", startedAt:$now}]
+                }
+              ' > "$FILE"
+            fi
+
+            # If the issue was reopened, reflect that in history
+            if [ "$ISSUE_ACTION" = "reopened" ]; then
+              jq --arg now "$NOW" '
+                .currentStage = "requirements"
+                | .lastUpdated = $now
+                | .stageHistory += [{stage:"requirements", status:"reopened", startedAt:$now}]
+              ' "$FILE" > tmp && mv tmp "$FILE"
+            fi
+          fi
+
+          # Validate JSON
+          jq . "$FILE" > /dev/null
+
+      - name: Commit pipeline file
+        if: steps.build_json.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --rebase origin "${GITHUB_REF_NAME:-${GITHUB_HEAD_REF:-main}}" || true
+          git add logs/pipeline/*.json
+          git config user.email "action@github.com"
+          git config user.name "github-actions"
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore(pipeline): sync intake ${{ steps.build_json.outputs.feature_id }} [skip deploy]"
+            git push
+          fi

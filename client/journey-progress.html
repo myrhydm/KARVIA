@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journey Progress | Manifestor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4 max-w-4xl">
+        <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">🎯 Your AI-Generated Journey Plan</h1>
+        
+        <!-- Loading State -->
+        <div id="loading-state" class="text-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <h2 class="text-lg font-semibold text-gray-700">Loading your personalized plan...</h2>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="hidden text-center py-12">
+            <div class="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
+                <div class="text-red-500 text-4xl mb-4">⚠️</div>
+                <h3 class="text-lg font-semibold text-red-800 mb-2">Unable to Load Plan</h3>
+                <p id="error-message" class="text-red-600 mb-4">Something went wrong loading your journey plan.</p>
+                <button id="retry-button" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition">
+                    Try Again
+                </button>
+            </div>
+        </div>
+
+        <!-- Plan Content -->
+        <div id="plan-content" class="hidden space-y-6">
+            <!-- AI Badge -->
+            <div class="text-center">
+                <div class="inline-block bg-gradient-to-r from-purple-500 to-blue-500 text-white px-4 py-2 rounded-full text-sm font-medium">
+                    🤖 AI Generated Plan
+                </div>
+            </div>
+
+            <!-- Dream Display -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">💭 Your Dream</h2>
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                    <p id="dream-text" class="text-gray-700 italic text-lg"></p>
+                </div>
+            </div>
+
+            <!-- Weekly Plan Overview -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">📅 Your 21-Day Journey Plan</h2>
+                <div id="weekly-plan" class="space-y-4">
+                    <!-- Weekly goals will be populated here -->
+                </div>
+            </div>
+
+            <!-- Daily Tasks -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">✅ Today's Action Items</h2>
+                <div id="tasks-container" class="space-y-3">
+                    <!-- Tasks will be populated here -->
+                </div>
+                
+                <!-- Encouragement Message -->
+                <div class="mt-6 text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div class="text-green-600 text-xl mb-2">🌟</div>
+                    <p class="text-green-700 font-medium">Your journey to achieving your dream starts now!</p>
+                    <p class="text-green-600 text-sm mt-1">Complete each task to make progress toward your goal</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SimplifiedJourneyProgress {
+            constructor() {
+                this.planData = null;
+                this.init();
+            }
+
+            async init() {
+                try {
+                    await this.loadPlan();
+                    this.displayPlan();
+                    this.setupEventListeners();
+                } catch (error) {
+                    console.error('Error loading plan:', error);
+                    this.showError(error.message);
+                }
+            }
+
+            async loadPlan() {
+                const token = localStorage.getItem('authToken');
+                if (!token) {
+                    throw new Error('Please login to view your plan');
+                }
+
+                const response = await fetch('/api/consumer/journey/plan', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+                if (!result.success) {
+                    throw new Error(result.error || 'Failed to load plan');
+                }
+
+                this.planData = result.data;
+            }
+
+            displayPlan() {
+                this.hideLoading();
+                
+                // Display dream
+                const dreamText = document.getElementById('dream-text');
+                if (dreamText && this.planData.journey.dreamText) {
+                    dreamText.textContent = this.planData.journey.dreamText;
+                }
+
+                // Display weekly plan
+                this.displayWeeklyPlan();
+                
+                // Display tasks
+                this.displayTasks();
+                
+                // Show content
+                document.getElementById('plan-content').classList.remove('hidden');
+            }
+
+            displayWeeklyPlan() {
+                const weeklyPlan = document.getElementById('weekly-plan');
+                if (!weeklyPlan || !this.planData.plan) return;
+
+                const goals = this.planData.plan;
+                
+                if (goals.length === 0) {
+                    weeklyPlan.innerHTML = `
+                        <div class="text-center py-8 text-gray-500">
+                            <div class="text-4xl mb-4">⏳</div>
+                            <p class="text-lg">Your plan is being prepared...</p>
+                            <p class="text-sm">Check back soon for your detailed action plan</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const weeksHTML = goals.map((goal, index) => `
+                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0 mr-4">
+                                <div class="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">
+                                    ${index + 1}
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-semibold text-gray-800 mb-2">
+                                    Week ${index + 1}: ${goal.title}
+                                </h3>
+                                ${goal.description ? `<p class="text-gray-600 mb-3">${goal.description}</p>` : ''}
+                                ${goal.tasks && goal.tasks.length > 0 ? `
+                                    <div class="bg-gray-50 rounded p-3">
+                                        <p class="text-sm font-medium text-gray-700 mb-2">Key Activities:</p>
+                                        <ul class="text-sm text-gray-600 space-y-1">
+                                            ${goal.tasks.slice(0, 3).map(task => `
+                                                <li class="flex items-center">
+                                                    <span class="w-1.5 h-1.5 bg-blue-400 rounded-full mr-2"></span>
+                                                    ${task.name}
+                                                </li>
+                                            `).join('')}
+                                            ${goal.tasks.length > 3 ? `<li class="text-gray-500 text-xs ml-3">+${goal.tasks.length - 3} more</li>` : ''}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                weeklyPlan.innerHTML = weeksHTML;
+            }
+
+            displayTasks() {
+                const tasksContainer = document.getElementById('tasks-container');
+                if (!tasksContainer || !this.planData.tasks) return;
+
+                const tasks = this.planData.tasks;
+
+                if (tasks.length === 0) {
+                    tasksContainer.innerHTML = `
+                        <div class="text-center py-8 text-gray-500">
+                            <div class="text-4xl mb-4">📝</div>
+                            <p class="text-lg">No tasks yet</p>
+                            <p class="text-sm">Your action items will appear here once ready</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Show first 10 tasks to keep it simple
+                const visibleTasks = tasks.slice(0, 10);
+                
+                const tasksHTML = visibleTasks.map(task => `
+                    <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg ${task.isCompleted ? 'bg-green-50 opacity-75' : 'bg-white hover:bg-gray-50'}">
+                        <div class="flex items-center flex-1">
+                            <div class="flex-shrink-0 mr-3">
+                                ${task.isCompleted ? 
+                                    '<div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center"><span class="text-white text-xs">✓</span></div>' :
+                                    '<div class="w-5 h-5 border-2 border-gray-300 rounded-full"></div>'
+                                }
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium text-gray-800 ${task.isCompleted ? 'line-through' : ''}">${task.name}</h4>
+                                ${task.description ? `<p class="text-sm text-gray-600 mt-1">${task.description}</p>` : ''}
+                                <div class="flex items-center space-x-3 mt-2">
+                                    ${task.estimatedTime ? `<span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">${task.estimatedTime} min</span>` : ''}
+                                    ${task.goalTitle ? `<span class="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">${task.goalTitle}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        ${!task.isCompleted ? `
+                            <button onclick="journeyProgress.completeTask('${task.id}')" 
+                                    class="ml-4 bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600 transition">
+                                Complete
+                            </button>
+                        ` : ''}
+                    </div>
+                `).join('');
+
+                tasksContainer.innerHTML = tasksHTML;
+
+                if (tasks.length > 10) {
+                    tasksContainer.innerHTML += `
+                        <div class="text-center py-4">
+                            <p class="text-gray-500 text-sm">Showing first 10 tasks. ${tasks.length - 10} more tasks available in your full plan.</p>
+                        </div>
+                    `;
+                }
+            }
+
+            async completeTask(taskId) {
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const response = await fetch('/api/consumer/journey/complete-task', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ taskId })
+                    });
+
+                    const result = await response.json();
+                    
+                    if (!result.success) {
+                        throw new Error(result.error || 'Failed to complete task');
+                    }
+
+                    // Show success message
+                    this.showSuccessToast(result.message || 'Task completed!');
+
+                    // Reload and redisplay
+                    await this.loadPlan();
+                    this.displayTasks();
+
+                } catch (error) {
+                    console.error('Error completing task:', error);
+                    this.showErrorToast('Unable to complete task. Please try again.');
+                }
+            }
+
+            setupEventListeners() {
+                const retryButton = document.getElementById('retry-button');
+                if (retryButton) {
+                    retryButton.addEventListener('click', () => {
+                        this.hideError();
+                        this.showLoading();
+                        this.init();
+                    });
+                }
+            }
+
+            showLoading() {
+                document.getElementById('loading-state').classList.remove('hidden');
+                document.getElementById('error-state').classList.add('hidden');
+                document.getElementById('plan-content').classList.add('hidden');
+            }
+
+            hideLoading() {
+                document.getElementById('loading-state').classList.add('hidden');
+            }
+
+            showError(message) {
+                document.getElementById('error-message').textContent = message;
+                document.getElementById('error-state').classList.remove('hidden');
+                document.getElementById('loading-state').classList.add('hidden');
+                document.getElementById('plan-content').classList.add('hidden');
+            }
+
+            hideError() {
+                document.getElementById('error-state').classList.add('hidden');
+            }
+
+            showSuccessToast(message) {
+                this.showToast(message, 'success');
+            }
+
+            showErrorToast(message) {
+                this.showToast(message, 'error');
+            }
+
+            showToast(message, type = 'success') {
+                const toast = document.createElement('div');
+                const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+                toast.className = `fixed top-4 right-4 ${bgColor} text-white px-4 py-3 rounded shadow-lg z-50 transform translate-x-full transition-transform duration-300`;
+                toast.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="mr-2">${type === 'success' ? '✅' : '❌'}</span>
+                        <span>${message}</span>
+                    </div>
+                `;
+                document.body.appendChild(toast);
+
+                setTimeout(() => toast.classList.remove('translate-x-full'), 100);
+                setTimeout(() => {
+                    toast.classList.add('translate-x-full');
+                    setTimeout(() => document.body.removeChild(toast), 300);
+                }, 3000);
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.journeyProgress = new SimplifiedJourneyProgress();
+        });
+    </script>
+</body>
+</html>

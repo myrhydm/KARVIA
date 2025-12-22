@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Brain outline -->
+  <path d="M50 10 C30 10, 15 25, 15 45 C15 55, 18 65, 25 72 C20 75, 18 80, 20 85 C22 90, 28 92, 35 90 C40 95, 50 95, 60 90 C67 92, 73 90, 75 85 C77 80, 75 75, 70 72 C77 65, 80 55, 80 45 C80 25, 65 10, 50 10 Z" 
+        fill="url(#brainGradient)" 
+        stroke="#4a5568" 
+        stroke-width="1"/>
+  
+  <!-- Brain folds/wrinkles -->
+  <path d="M25 30 Q35 25, 45 30 Q55 35, 65 30" 
+        fill="none" 
+        stroke="#4a5568" 
+        stroke-width="1.5" 
+        opacity="0.6"/>
+  
+  <path d="M22 40 Q32 35, 42 40 Q52 45, 62 40" 
+        fill="none" 
+        stroke="#4a5568" 
+        stroke-width="1.5" 
+        opacity="0.6"/>
+  
+  <path d="M25 50 Q35 45, 45 50 Q55 55, 65 50" 
+        fill="none" 
+        stroke="#4a5568" 
+        stroke-width="1.5" 
+        opacity="0.6"/>
+  
+  <path d="M28 60 Q38 55, 48 60 Q58 65, 68 60" 
+        fill="none" 
+        stroke="#4a5568" 
+        stroke-width="1.5" 
+        opacity="0.6"/>
+  
+  <!-- Central division -->
+  <path d="M50 15 Q50 25, 50 35 Q50 45, 50 55 Q50 65, 50 75" 
+        fill="none" 
+        stroke="#4a5568" 
+        stroke-width="2" 
+        opacity="0.4"/>
+  
+  <!-- Neural connections (dots) -->
+  <circle cx="35" cy="35" r="2" fill="#4a5568" opacity="0.7"/>
+  <circle cx="65" cy="35" r="2" fill="#4a5568" opacity="0.7"/>
+  <circle cx="30" cy="50" r="2" fill="#4a5568" opacity="0.7"/>
+  <circle cx="70" cy="50" r="2" fill="#4a5568" opacity="0.7"/>
+  <circle cx="40" cy="65" r="2" fill="#4a5568" opacity="0.7"/>
+  <circle cx="60" cy="65" r="2" fill="#4a5568" opacity="0.7"/>
+  
+  <!-- Highlight -->
+  <ellipse cx="40" cy="25" rx="8" ry="4" fill="#ffffff" opacity="0.3"/>
+</svg>

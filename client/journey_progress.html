@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journey Progress - Manifestor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/design-system.css">
+    <style>
+        /* Duolingo-inspired minimalistic styling */
+        .progress-dot {
+            transition: all 0.3s ease;
+        }
+        
+        .progress-dot.completed {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+        }
+        
+        .progress-dot.current {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+            animation: pulse 2s infinite;
+        }
+        
+        .progress-dot.locked {
+            background: #e5e7eb;
+            border: 2px solid #d1d5db;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .xp-badge {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            animation: bounce 0.5s ease-in-out;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        .reflection-box {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .stage-card {
+            transition: all 0.3s ease;
+        }
+        
+        .stage-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .locked-overlay {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(4px);
+        }
+        
+        /* Enhanced fading background effect */
+        .fade-bg {
+            animation: subtleFade 6s ease-in-out infinite alternate;
+        }
+        
+        @keyframes subtleFade {
+            0% { opacity: 0.5; }
+            100% { opacity: 0.8; }
+        }
+        
+        /* Duolingo-style tile enhancements */
+        .stage-card {
+            min-height: 180px;
+            position: relative;
+            overflow: hidden;
+            z-index: 10;
+        }
+        
+        .stage-card.current {
+            animation: subtle-glow 3s ease-in-out infinite alternate;
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+        }
+        
+        @keyframes subtle-glow {
+            0% { box-shadow: 0 4px 20px rgba(59, 130, 246, 0.1); }
+            100% { box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2); }
+        }
+        
+        .stage-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .stage-card.current:hover {
+            transform: scale(1.05) translateY(-2px);
+        }
+        
+        /* Journey path styling */
+        .journey-path {
+            position: relative;
+        }
+        
+        .journey-path::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(to right, #e5e7eb 0%, #d1d5db 50%, #e5e7eb 100%);
+            z-index: 0;
+            border-radius: 2px;
+        }
+        
+        .progress-dot-small {
+            transition: all 0.2s ease;
+        }
+        
+        .progress-dot-small:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Stage-aware styling */
+        .discovery-only {
+            display: block;
+        }
+        
+        .onboarding-only {
+            display: none;
+        }
+        
+        .dimension-score {
+            display: none;
+        }
+        
+        .stage-indicator {
+            transition: all 0.3s ease;
+        }
+        
+        .stage-indicator.discovery {
+            background-color: #f3e8ff;
+            color: #7c3aed;
+        }
+        
+        .stage-indicator.onboarding {
+            background-color: #dbeafe;
+            color: #2563eb;
+        }
+        
+        .stage-indicator.growth {
+            background-color: #d1fae5;
+            color: #059669;
+        }
+        
+        .stage-indicator.mastery {
+            background-color: #fef3c7;
+            color: #d97706;
+        }
+        
+        /* Achievement styling */
+        .achievement-badge {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+            margin: 0.125rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .achievement-badge.new {
+            animation: achievement-bounce 0.6s ease-out;
+        }
+        
+        @keyframes achievement-bounce {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        /* Insight and recommendation styling */
+        .insight-item {
+            border-left: 4px solid #3b82f6;
+            background: #f8fafc;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+        
+        .insight-item.positive {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        .insight-item.improvement {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+        
+        .insight-item.warning {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .recommendation-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.375rem;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            background: white;
+            font-size: 0.875rem;
+        }
+        
+        .recommendation-item.high {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .recommendation-item.medium {
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .recommendation-item.low {
+            border-left: 4px solid #10b981;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
+    <!-- Navigation will be injected here -->
+    <div id="navigation-container"></div>
+
+    <div class="min-h-screen">
+        <!-- Main Content Area -->
+        <div class="p-4 max-w-6xl mx-auto">
+            <!-- Dynamic Header -->
+            <div class="mb-4">
+                <div id="motivational-header" class="bg-white rounded-lg shadow p-3 border border-gray-100">
+                    <!-- Will be populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Current Stage Content -->
+            <div class="mb-4">
+                <div id="stage-content" class="bg-white rounded-lg shadow p-4">
+                    <!-- Dynamic stage content will be loaded here -->
+                    <div id="daily-focus" class="mb-4"></div>
+                    <div id="key-actions" class="mb-4"></div>
+                    <div id="success-tips" class="mb-4"></div>
+                </div>
+                
+            </div>
+            
+            <!-- Main Progress Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
+                <!-- User Info Tile -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h3 class="font-semibold text-gray-800 mb-4">Your Profile</h3>
+                    
+                    <!-- User Dream Section -->
+                    <div class="mb-4">
+                        <h4 class="font-medium text-gray-800 mb-2 text-sm">Your Dream</h4>
+                        <div id="user-dream" class="text-sm text-gray-600 bg-gray-50 rounded p-3 italic">
+                            Loading...
+                        </div>
+                    </div>
+
+                    <!-- Stage Indicator -->
+                    <div class="mb-4">
+                        <div id="stage-indicator" class="stage-indicator discovery bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium text-center">
+                            Self Discovery
+                        </div>
+                        <div id="daily-message" class="text-sm text-gray-600 text-center mt-2">
+                            Ready to visit your dream today?
+                        </div>
+                    </div>
+
+                    <!-- Self Discovery Stage - 5 Dimension Scoring -->
+                    <div id="discovery-metrics" class="discovery-only space-y-2 mb-4">
+                        <h4 class="font-medium text-gray-800 mb-3 text-sm">Self Discovery Progress</h4>
+                        
+                        <!-- Active Scores in Discovery Stage -->
+                        <div class="bg-blue-50 rounded p-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-medium text-blue-800 flex items-center">
+                                    🔍 Clarity
+                                </span>
+                                <span id="clarity-score-discovery" class="text-xs font-bold text-blue-600">--</span>
+                            </div>
+                            <div class="text-xs text-blue-600 mt-1 opacity-75">Goal & path definition</div>
+                        </div>
+
+                        <div class="bg-red-50 rounded p-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-medium text-red-800 flex items-center">
+                                    🔥 Commitment
+                                </span>
+                                <span id="commitment-score-discovery" class="text-xs font-bold text-red-600">--</span>
+                            </div>
+                            <div class="text-xs text-red-600 mt-1 opacity-75">Consistency & follow-through</div>
+                        </div>
+
+                        <div class="bg-green-50 rounded p-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-medium text-green-800 flex items-center">
+                                    🌱 Adaptability
+                                </span>
+                                <span id="growth-readiness-score-discovery" class="text-xs font-bold text-green-600">--</span>
+                            </div>
+                            <div class="text-xs text-green-600 mt-1 opacity-75">Openness to adapt & learn</div>
+                        </div>
+
+                        <!-- Locked Scores (shown but grayed out) -->
+                        <div class="bg-gray-50 rounded p-2 opacity-60">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-medium text-gray-600 flex items-center">
+                                    🧠 Competency
+                                    <span class="ml-1 text-xs bg-gray-200 px-1 rounded">LOCKED</span>
+                                </span>
+                                <span id="competency-score-discovery" class="text-xs font-bold text-gray-500">--</span>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">Unlocks in next stage</div>
+                        </div>
+
+                        <div class="bg-gray-50 rounded p-2 opacity-60">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-medium text-gray-600 flex items-center">
+                                    📈 Opportunity
+                                    <span class="ml-1 text-xs bg-gray-200 px-1 rounded">LOCKED</span>
+                                </span>
+                                <span id="opportunity-score-discovery" class="text-xs font-bold text-gray-500">--</span>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">Unlocks in next stage</div>
+                        </div>
+                    </div>
+
+                    <!-- 5-Dimension Scores (Onboarding Stage) -->
+                    <div class="onboarding-only space-y-2 mb-4" style="display: none;">
+                        <h4 class="font-medium text-gray-800 mb-3 text-sm">Professional Readiness</h4>
+                        
+                        <div class="bg-blue-50 rounded p-2 dimension-score">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-medium text-blue-800 flex items-center">
+                                    🧠 Readiness
+                                </span>
+                                <span id="readiness-score" class="text-xs font-bold text-blue-600">--%</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-purple-50 rounded p-2 dimension-score">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-medium text-purple-800 flex items-center">
+                                    🔍 Clarity
+                                </span>
+                                <span id="clarity-score" class="text-xs font-bold text-purple-600">--%</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-green-50 rounded p-2 dimension-score">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-medium text-green-800 flex items-center">
+                                    🧭 Commitment
+                                </span>
+                                <span id="commitment-score" class="text-xs font-bold text-green-600">--%</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-orange-50 rounded p-2 dimension-score">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-medium text-orange-800 flex items-center">
+                                    🌀 Growth
+                                </span>
+                                <span id="growth-score" class="text-xs font-bold text-orange-600">--%</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-indigo-50 rounded p-2 dimension-score">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-medium text-indigo-800 flex items-center">
+                                    📈 Opportunity
+                                </span>
+                                <span id="opportunity-score" class="text-xs font-bold text-indigo-600">--%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Overall Progress Summary -->
+                    <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded p-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-gray-700">Overall Score</span>
+                            <div class="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+                                <span id="overall-score">0%</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-medium text-gray-700">Current Focus</span>
+                            <span id="current-focus" class="text-sm font-bold text-purple-600">Self Discovery</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Self Discovery Stage Cards -->
+                <div class="lg:col-span-3 bg-white rounded-lg shadow p-4">
+                    <h3 class="font-semibold text-gray-800 mb-2">Self Discovery Stage</h3>
+                    <div id="discovery-stage-subtitle" class="text-sm font-medium text-indigo-600 mb-4">Explore your potential through engine-driven insights</div>
+                    
+                    <!-- Loading State -->
+                    <div id="discovery-cards-loading" class="text-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-2"></div>
+                        <p class="text-gray-500">Loading your discovery insights...</p>
+                    </div>
+                    
+                    <!-- Discovery Cards Container -->
+                    <div id="discovery-cards-container" class="hidden">
+                        <!-- Progress Overview Card -->
+                        <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 mb-4">
+                            <h4 class="font-medium text-gray-800 mb-2">Progress Overview</h4>
+                            <div class="grid grid-cols-3 gap-4 text-center">
+                                <div>
+                                    <div id="planner-progress" class="text-2xl font-bold text-purple-600">--</div>
+                                    <div class="text-xs text-gray-600">Planner</div>
+                                </div>
+                                <div>
+                                    <div id="tracker-progress" class="text-2xl font-bold text-blue-600">--</div>
+                                    <div class="text-xs text-gray-600">Tracker</div>
+                                </div>
+                                <div>
+                                    <div id="scoring-progress" class="text-2xl font-bold text-green-600">--</div>
+                                    <div class="text-xs text-gray-600">Scoring</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 5-Dimension Detailed Cards -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                            <!-- Clarity Card -->
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-medium text-blue-800 flex items-center">
+                                        🔍 Clarity
+                                    </h4>
+                                    <span id="clarity-card-score" class="text-lg font-bold text-blue-600">--</span>
+                                </div>
+                                <p class="text-xs text-blue-700 mb-2">How clearly goals, path, and success criteria are defined</p>
+                                <div id="clarity-insights" class="text-xs text-blue-600">
+                                    <!-- Dynamic insights -->
+                                </div>
+                            </div>
+                            
+                            <!-- Commitment Card -->
+                            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-medium text-red-800 flex items-center">
+                                        🔥 Commitment
+                                    </h4>
+                                    <span id="commitment-card-score" class="text-lg font-bold text-red-600">--</span>
+                                </div>
+                                <p class="text-xs text-red-700 mb-2">Consistency in execution, habits, follow-through</p>
+                                <div id="commitment-insights" class="text-xs text-red-600">
+                                    <!-- Dynamic insights -->
+                                </div>
+                            </div>
+                            
+                            <!-- Adaptability Card -->
+                            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-medium text-green-800 flex items-center">
+                                        🌱 Adaptability
+                                    </h4>
+                                    <span id="growth-readiness-card-score" class="text-lg font-bold text-green-600">--</span>
+                                </div>
+                                <p class="text-xs text-green-700 mb-2">Openness to adapt, learn, evolve with feedback</p>
+                                <div id="growth-readiness-insights" class="text-xs text-green-600">
+                                    <!-- Dynamic insights -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Locked Dimension Preview -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <!-- Competency Card (Locked) -->
+                            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 opacity-60">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-medium text-gray-600 flex items-center">
+                                        🧠 Competency
+                                        <span class="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">LOCKED</span>
+                                    </h4>
+                                    <span id="competency-card-score" class="text-lg font-bold text-gray-500">--</span>
+                                </div>
+                                <p class="text-xs text-gray-600 mb-2">Skill application and knowledge demonstration</p>
+                                <div class="text-xs text-gray-500">Unlocks in Growth Stage</div>
+                            </div>
+                            
+                            <!-- Opportunity Card (Locked) -->
+                            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 opacity-60">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-medium text-gray-600 flex items-center">
+                                        📈 Opportunity
+                                        <span class="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">LOCKED</span>
+                                    </h4>
+                                    <span id="opportunity-card-score" class="text-lg font-bold text-gray-500">--</span>
+                                </div>
+                                <p class="text-xs text-gray-600 mb-2">Market positioning and network access</p>
+                                <div class="text-xs text-gray-500">Unlocks in Growth Stage</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Error State -->
+                    <div id="discovery-cards-error" class="hidden text-center py-8">
+                        <div class="text-red-500 mb-2">⚠️</div>
+                        <p class="text-gray-600">Unable to load discovery insights</p>
+                        <button id="retry-discovery-cards" class="text-blue-600 hover:underline text-sm mt-2">Retry</button>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Insights and Recommendations -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                <!-- Insights -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h3 class="font-medium text-gray-800 mb-3">Insights</h3>
+                    <div id="insights-container" class="space-y-2">
+                        <div class="text-sm text-gray-500 text-center py-4">
+                            Insights will appear as you progress through your journey.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommendations -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h3 class="font-medium text-gray-800 mb-3">Recommendations</h3>
+                    <div id="recommendations-container" class="space-y-2">
+                        <div class="text-sm text-gray-500 text-center py-4">
+                            Personalized recommendations will appear here.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p class="text-gray-600">Loading your journey...</p>
+        </div>
+    </div>
+
+    <script src="pages/scripts/utils.js"></script>
+    <script src="pages/scripts/trackingClient.js"></script>
+    <script src="pages/scripts/navigation.js"></script>
+    <script src="pages/scripts/journey_progress.js"></script>
+</body>
+</html>

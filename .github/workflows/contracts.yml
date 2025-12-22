@@ -1,0 +1,439 @@
+name: 📄 Contracts Validation & Publishing
+
+on:
+  pull_request:
+    paths:
+      - 'contracts/**'
+      - '.github/workflows/contracts.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'contracts/**'
+      - '.github/workflows/contracts.yml'
+
+concurrency:
+  group: contracts-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: write
+  id-token: write
+
+jobs:
+  validate-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛒 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 🐹 Setup Go for oasdiff
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: 🔨 Install Go tools
+        run: |
+          go install github.com/tufin/oasdiff@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: 📦 Install dependencies
+        run: |
+          npm install -g @redocly/cli@latest
+          npm install -g @stoplight/spectral-cli@latest
+          npm install -D ajv@latest ajv-cli@latest js-yaml@^4 json-schema-to-typescript@latest
+
+      - name: 🔍 Discover contract files
+        id: discover
+        run: |
+          echo "📁 Discovering contract files..."
+          API_FILES=$(find contracts/api -name "*.yaml" -o -name "*.yml" 2>/dev/null | tr '\n' ' ' || echo "")
+          EVENT_FILES=$(find contracts/events -name "*.json" 2>/dev/null | tr '\n' ' ' || echo "")
+          
+          echo "api-files=${API_FILES}" >> $GITHUB_OUTPUT
+          echo "event-files=${EVENT_FILES}" >> $GITHUB_OUTPUT
+          
+          echo "🔍 Found API files: ${API_FILES}"
+          echo "🔍 Found Event files: ${EVENT_FILES}"
+
+      - name: ✅ Validate OpenAPI specs
+        if: steps.discover.outputs.api-files != ''
+        run: |
+          echo "🔍 Validating OpenAPI specifications..."
+          for file in ${{ steps.discover.outputs.api-files }}; do
+            if [ -f "$file" ]; then
+              echo "📋 Validating $file..."
+              
+              # Redocly validation with fallback
+              if [ -f "contracts/.redocly.yaml" ]; then
+                redocly lint "$file" --config contracts/.redocly.yaml || {
+                  echo "❌ Redocly validation failed for $file"
+                  exit 1
+                }
+              else
+                redocly lint "$file" || {
+                  echo "❌ Redocly validation failed for $file (using defaults)"
+                  exit 1
+                }
+              fi
+              
+              # Spectral validation with custom functions
+              if [ -f "contracts/.spectral.yaml" ]; then
+                spectral lint "$file" --ruleset contracts/.spectral.yaml --functions spectral-functions || {
+                  echo "❌ Spectral validation failed for $file"
+                  exit 1
+                }
+              else
+                spectral lint "$file" --functions spectral-functions || {
+                  echo "❌ Spectral validation failed for $file (using defaults)"
+                  exit 1
+                }
+              fi
+            fi
+          done
+          echo "✅ All OpenAPI specs validated successfully"
+
+      - name: ✅ Validate Event schemas
+        if: steps.discover.outputs.event-files != ''
+        run: |
+          echo "🔍 Validating Event JSON schemas..."
+          for file in ${{ steps.discover.outputs.event-files }}; do
+            if [ -f "$file" ]; then
+              echo "📋 Validating $file..."
+              
+              # Basic JSON validation
+              jq empty "$file" || {
+                echo "❌ Invalid JSON in $file"
+                exit 1
+              }
+              
+              # AJV schema validation with strict mode
+              npx ajv compile --spec=draft2020 --strict=true --all-errors --verbose -s "$file" || {
+                echo "❌ AJV schema validation failed for $file"
+                exit 1
+              }
+            fi
+          done
+          echo "✅ All Event schemas validated successfully"
+
+      - name: ✅ Validate Event examples (optional)
+        if: steps.discover.outputs.event-files != ''
+        run: |
+          echo "🔍 Validating Event examples..."
+          if [ -d "contracts/events/examples" ]; then
+            for example in contracts/events/examples/*.example.json; do
+              if [ -f "$example" ]; then
+                echo "📋 Validating example: $example"
+                jq empty "$example" || {
+                  echo "❌ Invalid JSON in example $example"
+                  exit 1
+                }
+                # Could add schema validation against parent schema here
+              fi
+            done
+          fi
+          echo "✅ Event examples validated successfully"
+
+      - name: 🔄 Check breaking changes (PR only)
+        if: github.event_name == 'pull_request' && steps.discover.outputs.api-files != ''
+        run: |
+          echo "🔍 Checking for breaking changes..."
+          
+          # Ensure we have the base branch
+          git fetch origin ${{ github.base_ref }}:${{ github.base_ref }}
+          
+          BREAKING_CHANGES=""
+          MAJOR_BUMPS_NEEDED=""
+          
+          for file in ${{ steps.discover.outputs.api-files }}; do
+            if [ -f "$file" ]; then
+              BASE_FILE="$file"
+              if git show origin/${{ github.base_ref }}:"$file" > /tmp/base_spec.yaml 2>/dev/null; then
+                echo "📋 Checking breaking changes in $file..."
+                
+                # Check for breaking changes
+                if ! oasdiff breaking /tmp/base_spec.yaml "$file" >/tmp/break.txt 2>&1; then
+                  echo "⚠️ Breaking changes detected in $file:"
+                  cat /tmp/break.txt
+                  BREAKING_CHANGES="$BREAKING_CHANGES\n- $file: $(head -1 /tmp/break.txt)"
+                  
+                  # Enforce deprecation metadata on breaking changes
+                  if ! grep -Eq 'x-deprecated:\s*true|x-removal-date|x-compatibility-window-days' "$file"; then
+                    echo "❌ Breaking changes require deprecation metadata in $file"
+                    echo "Add: x-deprecated: true, x-removal-date, x-compatibility-window-days"
+                    exit 1
+                  fi
+                  
+                  # Extract version from filename (e.g., UserAPI.v2.yaml -> v2)
+                  CURRENT_VERSION=$(basename "$file" | grep -oE 'v[0-9]+' || echo "")
+                  if [ -n "$CURRENT_VERSION" ]; then
+                    CURRENT_MAJOR=$(echo "$CURRENT_VERSION" | sed 's/v//')
+                    NEXT_MAJOR=$((CURRENT_MAJOR + 1))
+                    MAJOR_BUMPS_NEEDED="$MAJOR_BUMPS_NEEDED\n- $file: Bump to v$NEXT_MAJOR"
+                  fi
+                fi
+              else
+                echo "📋 New file detected: $file (no breaking change check needed)"
+              fi
+            fi
+          done
+          
+          if [ -n "$BREAKING_CHANGES" ]; then
+            echo "❌ Breaking changes detected! Major version bumps required:"
+            echo -e "$MAJOR_BUMPS_NEEDED"
+            echo ""
+            echo "Breaking changes found:"
+            echo -e "$BREAKING_CHANGES"
+            echo ""
+            echo "🔧 Required actions:"
+            echo "1. Increment major version in filename (e.g., v1 → v2)"
+            echo "2. Ensure deprecation metadata is present (already validated)"
+            exit 1
+          fi
+          
+          echo "✅ No breaking changes detected"
+
+      - name: 🏗️ Generate TypeScript types
+        run: |
+          echo "🏗️ Generating TypeScript types..."
+          mkdir -p types/generated/{api,events}
+          
+          # Generate API types
+          for file in ${{ steps.discover.outputs.api-files }}; do
+            if [ -f "$file" ]; then
+              filename="$(basename "$file")"
+              filename="${filename%.*}"   # strips .yaml or .yml
+              echo "📋 Generating types for $filename..."
+              npx openapi-typescript "$file" --output "types/generated/api/${filename}.d.ts"
+            fi
+          done
+          
+          # Generate Event types
+          for file in ${{ steps.discover.outputs.event-files }}; do
+            if [ -f "$file" ]; then
+              filename="$(basename "$file")"
+              filename="${filename%.*}"   # strips .json
+              echo "📋 Generating types for $filename..."
+              npx json2ts -i "$file" -o "types/generated/events/${filename}.d.ts"
+            fi
+          done
+          
+          # Create barrel exports for generated types
+          (cd types/generated/api && ls *.d.ts >/dev/null 2>&1 && \
+            printf '%s\n' "export {};" > index.d.ts && \
+            for f in *.d.ts; do [ "$f" != "index.d.ts" ] && echo "export * from './${f%.d.ts}';" >> index.d.ts; done || true)
+          (cd types/generated/events && ls *.d.ts >/dev/null 2>&1 && \
+            printf '%s\n' "export {};" > index.d.ts && \
+            for f in *.d.ts; do [ "$f" != "index.d.ts" ] && echo "export * from './${f%.d.ts}';" >> index.d.ts; done || true)
+          
+          # Create main barrel export
+          mkdir -p types && cat > types/index.d.ts <<'EOF'
+// Re-export generated API & event types
+export * from './generated/api';
+export * from './generated/events';
+EOF
+          
+          echo "✅ TypeScript types generated successfully"
+
+      - name: 📖 Generate contract catalog
+        run: |
+          echo "📖 Generating contract catalog..."
+          
+          # Use Node.js for robust JSON generation
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            const yaml = require('js-yaml');
+            
+            const catalog = {
+              version: '1.0',
+              generated: new Date().toISOString(),
+              contracts: {
+                api: [],
+                events: []
+              }
+            };
+            
+            // Process API contracts
+            const apiFiles = '${{ steps.discover.outputs.api-files }}'.split(' ').filter(f => f);
+            for (const file of apiFiles) {
+              if (fs.existsSync(file)) {
+                try {
+                  const content = yaml.load(fs.readFileSync(file, 'utf8'));
+                  catalog.contracts.api.push({
+                    name: path.basename(file, path.extname(file)),
+                    version: content.info?.version || '1.0.0',
+                    title: content.info?.title || 'Untitled API',
+                    description: content.info?.description || '',
+                    file: file,
+                    deprecated: content['x-deprecated'] || false,
+                    removalDate: content['x-removal-date'] || null
+                  });
+                } catch (error) {
+                  console.error('Error processing', file, ':', error.message);
+                  process.exit(1);
+                }
+              }
+            }
+            
+            // Process Event contracts
+            const eventFiles = '${{ steps.discover.outputs.event-files }}'.split(' ').filter(f => f);
+            for (const file of eventFiles) {
+              if (fs.existsSync(file)) {
+                try {
+                  const content = JSON.parse(fs.readFileSync(file, 'utf8'));
+                  catalog.contracts.events.push({
+                    name: path.basename(file, '.json'),
+                    version: content.version || '1.0.0',
+                    title: content.title || 'Untitled Event',
+                    description: content.description || '',
+                    file: file,
+                    deprecated: content['x-deprecated'] || false,
+                    removalDate: content['x-removal-date'] || null
+                  });
+                } catch (error) {
+                  console.error('Error processing', file, ':', error.message);
+                  process.exit(1);
+                }
+              }
+            }
+            
+            fs.writeFileSync('contracts/catalog.json', JSON.stringify(catalog, null, 2));
+            console.log('✅ Contract catalog generated successfully');
+          "
+
+      - name: 📦 Commit generated files (main branch only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          git add types/generated/ contracts/catalog.json types/index.d.ts
+          git diff --cached --quiet || {
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git config user.name "github-actions[bot]"
+            git commit -m "chore(contracts): update types & catalog [skip ci]
+            
+            Generated TypeScript types and updated contract catalog
+            
+            🤖 Generated with Claude Code
+            Co-Authored-By: Claude <noreply@anthropic.com>"
+            git push
+          }
+
+      - name: 📦 Publish types package (main branch only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "📦 Publishing @goaltracker/contracts package..."
+          
+          # Create package.json if it doesn't exist
+          if [ ! -f "types/package.json" ]; then
+            cat > types/package.json << 'EOF'
+          {
+            "name": "@goaltracker/contracts",
+            "version": "0.0.0",
+            "description": "Generated TypeScript contracts for Goal Tracker API and Events",
+            "main": "index.js",
+            "types": "index.d.ts",
+            "files": ["generated/**/*", "index.d.ts"],
+            "repository": {
+              "type": "git",
+              "url": "git+https://github.com/${{ github.repository }}.git"
+            },
+            "keywords": ["contracts", "api", "types", "goaltracker"],
+            "license": "MIT"
+          }
+          EOF
+          fi
+          
+          # Auto-increment version based on changes
+          cd types
+          npm version patch --no-git-tag-version
+          npm publish --access public --provenance || echo "⚠️ Package publishing skipped (version may already exist)"
+          
+          echo "✅ Contract types package published"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 💬 PR Comment Summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            let comment = `## 📄 Contract Validation Summary\n\n`;
+            comment += `### 🔍 Files Processed\n`;
+            comment += `- **API contracts**: ${{ steps.discover.outputs.api-files }}\n`;
+            comment += `- **Event contracts**: ${{ steps.discover.outputs.event-files }}\n\n`;
+            
+            comment += `### ✅ Validation Results\n`;
+            comment += `- OpenAPI specs validated with Redocly + Spectral\n`;
+            comment += `- Event schemas validated with AJV (draft2020)\n`;
+            comment += `- Breaking change detection completed\n`;
+            comment += `- TypeScript types generated\n\n`;
+            
+            if (fs.existsSync('contracts/catalog.json')) {
+              const catalog = JSON.parse(fs.readFileSync('contracts/catalog.json', 'utf8'));
+              comment += `### 📖 Contract Catalog\n`;
+              comment += `- Generated: ${catalog.generated}\n`;
+              comment += `- API contracts: ${catalog.contracts.api.length}\n`;
+              comment += `- Event contracts: ${catalog.contracts.events.length}\n\n`;
+            }
+            
+            comment += `### 📦 Generated Artifacts\n`;
+            comment += `- TypeScript types: \`types/generated/\`\n`;
+            comment += `- Contract catalog: \`contracts/catalog.json\`\n`;
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Contract Validation Summary')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
+
+      - name: 📋 Summary
+        if: always()
+        run: |
+          echo "📋 Contract Validation Summary"
+          echo "=============================="
+          echo "🔍 API files processed: ${{ steps.discover.outputs.api-files }}"
+          echo "🔍 Event files processed: ${{ steps.discover.outputs.event-files }}"
+          echo ""
+          echo "✅ Validation pipeline completed"
+          echo "🏗️ TypeScript types generated in types/generated/"
+          echo "📖 Contract catalog updated at contracts/catalog.json"
+          echo ""
+          echo "📚 Next steps:"
+          echo "- Review generated types for accuracy"
+          echo "- Update consuming applications with new contracts"
+          echo "- Monitor deprecation timelines for sunset planning"

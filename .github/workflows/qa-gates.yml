@@ -1,0 +1,173 @@
+name: QA Gates
+
+on:
+  pull_request:
+    paths:
+      - 'server/**'
+      - 'client/**'
+      - 'contracts/**'
+      - 'tests/**'
+      - 'qa/**'
+      # add per-repo as needed:
+      - 'engines/**'
+      - 'packages/**'
+      - 'shared/**'
+
+concurrency:
+  group: qa-gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      - run: npm ci
+
+      # Unit/integration (Jest example)
+      - name: Run unit/integration tests
+        run: |
+          if [ -f package.json ] && jq -e '.devDependencies["jest-junit"]' package.json >/dev/null; then
+            JEST_JUNIT_OUTPUT=./junit.xml npm test -- --coverage --reporters=default --reporters=jest-junit
+          else
+            npm test -- --coverage
+          fi
+
+      - name: Enforce coverage ≥ 85%
+        run: |
+          COV=$(node -e "try{console.log(require('./coverage/coverage-summary.json').total.statements.pct)}catch(e){console.log(0)}")
+          echo "Coverage: $COV%"
+          awk -v c="$COV" 'BEGIN{exit (c<85)}'
+
+      # API contracts
+      - name: API contract compliance
+        run: |
+          if [ -f qa/api/collection.json ]; then
+            npx newman run qa/api/collection.json -e qa/api/env.postman.json --reporters cli,junit --reporter-junit-export newman.junit.xml
+          else
+            echo "⚠️ No API collection found, skipping contract tests"
+          fi
+
+      # E2E (Playwright)
+      - name: E2E (Playwright)
+        run: |
+          if [ -f playwright.config.js ]; then
+            npx playwright install --with-deps
+            npx playwright test --reporter=line
+          else
+            echo "⚠️ No Playwright config found, skipping E2E tests"
+          fi
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts-${{ github.run_id }}
+          path: |
+            playwright-report/**
+            test-results/**
+          retention-days: 30
+
+      # A11y
+      - name: Accessibility audit
+        run: |
+          if [ -f .pa11yci.json ]; then
+            npx pa11y-ci
+          else
+            echo "⚠️ No pa11y config found, skipping accessibility tests"
+          fi
+
+      # Perf smoke (k6)
+      - uses: grafana/setup-k6@v1
+        if: always()
+      - name: k6 smoke test
+        run: |
+          if [ -f qa/perf/smoke.js ]; then
+            k6 run qa/perf/smoke.js --quiet
+          else
+            echo "⚠️ No k6 smoke test found, skipping performance tests"
+          fi
+
+      # Flaky guard
+      - name: Flaky test guard
+        run: |
+          if [ -f qa/ci/check-flaky.sh ]; then
+            bash qa/ci/check-flaky.sh
+          else
+            echo "⚠️ No flaky test check script found"
+          fi
+
+      # Log metrics
+      - name: Log quality metrics
+        run: |
+          mkdir -p logs/qa
+          COV=$(node -e "try{console.log(require('./coverage/coverage-summary.json').total.statements.pct)}catch(e){console.log(0)}")
+          echo "{\"ts\":\"$(date -u +%FT%TZ)\",\"pr\":\"${{ github.event.number }}\",\"coverage\":$COV,\"sha\":\"${{ github.sha }}\"}" >> logs/qa/quality-metrics.jsonl
+
+      # Upload QA artifacts
+      - name: Upload QA artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-artifacts-${{ github.run_id }}
+          path: |
+            coverage/**
+            logs/qa/quality-metrics.jsonl
+            **/junit*.xml
+            **/test-results/**/*.xml
+          retention-days: 30
+
+      # Comment results
+      - name: Comment QA status (pass)
+        if: success()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          message: |
+            ✅ **QA Gates Passed**
+            - Coverage ≥ 85% ✅
+            - Contract tests OK ✅
+            - E2E tests OK ✅
+            - Accessibility OK ✅
+            - Performance smoke OK ✅
+            - No new flaky tests ✅
+            
+            📊 **Artifacts**: [QA Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            
+            <!-- QA_GATES_PASSED -->
+
+      - name: Comment QA status (fail)
+        if: failure()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          message: |
+            ❌ **QA Gates Failed**
+            
+            Fix failures and re-run:
+            - Coverage ≥ 85%
+            - Contract tests pass
+            - E2E stable
+            - Accessibility (WCAG AA)
+            - Perf within SLAs
+            - No new flakies
+            
+            📊 **Details**: [QA Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})

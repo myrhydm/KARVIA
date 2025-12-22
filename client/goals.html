@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karvia - Plan Your Week</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="css/design-system.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: white;
+            min-height: 100vh;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .nav-brand {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .goal-card {
+            transition: all 0.2s ease-in-out;
+        }
+        .goal-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .form-input {
+            min-height: 44px;
+            padding: 10px 14px;
+            font-size: 14px;
+        }
+        .enhanced-button {
+            min-height: 42px;
+            padding: 10px 20px;
+            transition: all 0.2s ease-in-out;
+        }
+        .enhanced-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .repeat-task {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border-left: 3px solid #10b981;
+            border-radius: 6px;
+        }
+        .analytics-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+        .analytics-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        .metric-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .day-bar {
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .day-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+            transition: width 0.3s ease;
+        }
+        .task-row {
+            padding: 12px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .task-row:last-child {
+            border-bottom: none;
+        }
+        .icon-btn-small {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .icon-btn-small:hover {
+            transform: scale(1.1);
+        }
+        .icon-btn-small.add {
+            background: #dbeafe;
+            color: #3b82f6;
+        }
+        .icon-btn-small.add:hover {
+            background: #bfdbfe;
+        }
+        .icon-btn-small.remove {
+            background: #fef2f2;
+            color: #ef4444;
+        }
+        .icon-btn-small.remove:hover {
+            background: #fecaca;
+        }
+        .icon-btn-small.repeat {
+            background: #f0fdf4;
+            color: #22c55e;
+        }
+        .icon-btn-small.repeat:hover {
+            background: #dcfce7;
+        }
+        .icon-btn-small.repeat.inactive {
+            background: #f9fafb;
+            color: #9ca3af;
+        }
+        .icon-btn-small.repeat.inactive:hover {
+            background: #f3f4f6;
+        }
+        .icon-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .icon-btn:hover {
+            transform: scale(1.05);
+        }
+        .icon-btn.add {
+            background: #dbeafe;
+            color: #3b82f6;
+        }
+        .icon-btn.add:hover {
+            background: #bfdbfe;
+        }
+        .icon-btn.remove {
+            background: #fef2f2;
+            color: #ef4444;
+        }
+        .icon-btn.remove:hover {
+            background: #fecaca;
+        }
+        .icon-btn.repeat {
+            background: #f0fdf4;
+            color: #22c55e;
+        }
+        .icon-btn.repeat:hover {
+            background: #dcfce7;
+        }
+        .icon-btn.repeat.inactive {
+            background: #f9fafb;
+            color: #9ca3af;
+        }
+        .icon-btn.repeat.inactive:hover {
+            background: #f3f4f6;
+        }
+        .goal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .goal-actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .task-actions {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        .control-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            border: 1.5px solid;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .control-pill:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+        .time-pill {
+            background: #faf5ff;
+            border-color: #e9d5ff;
+            color: #7c3aed;
+        }
+        .time-pill:hover {
+            background: #f3e8ff;
+            border-color: #d8b4fe;
+        }
+        .date-pill {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+            color: #16a34a;
+        }
+        .date-pill:hover {
+            background: #dcfce7;
+            border-color: #86efac;
+        }
+        .repeat-pill {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            color: #2563eb;
+        }
+        .repeat-pill:hover {
+            background: #dbeafe;
+            border-color: #93c5fd;
+        }
+        .delete-pill {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #ef4444;
+            padding: 4px 8px;
+        }
+        .delete-pill:hover {
+            background: #fee2e2;
+            border-color: #fca5a5;
+        }
+        .task-input-group {
+            position: relative;
+        }
+        .delete-corner-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+        .delete-corner-btn:hover {
+            background: #fee2e2;
+            border-color: #fca5a5;
+            transform: scale(1.05);
+        }
+        .pill-select {
+            background: transparent;
+            border: 0;
+            font-weight: 500;
+            font-size: 11px;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 2px center;
+            background-repeat: no-repeat;
+            background-size: 10px;
+            padding-right: 14px;
+            min-width: 0;
+            max-width: 90px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .pill-select:focus {
+            outline: none;
+            box-shadow: none;
+        }
+        .icon-select {
+            background: transparent;
+            border: 0;
+            font-size: 12px;
+            cursor: pointer;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+        }
+        .repeat-task {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border-color: #10b981;
+            border-left-width: 3px;
+        }
+        .task-controls-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+        }
+        @media (max-width: 640px) {
+            .control-pill {
+                font-size: 10px;
+                padding: 3px 8px;
+            }
+            .pill-select {
+                font-size: 10px;
+                max-width: 70px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation will be injected by navigation.js -->
+
+    <!-- Main Content -->
+    <main class="py-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Header Section -->
+            <div class="pb-8 border-b border-gray-200 mb-8">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold leading-tight text-gray-900">Plan Your Week</h1>
+                        <div id="current-day-date" class="mt-1 text-xl font-semibold text-indigo-600"></div>
+                        <p id="week-display" class="mt-2 text-lg text-gray-500"></p>
+                        <select id="week-selector"></select>
+                        
+                        <!-- Motivational Button to Home -->
+                        <div class="mt-4">
+                            <a href="home.html" class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-indigo-600 transform hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg">
+                                <span class="mr-2">⚡</span>
+                                Start Today
+                                <span class="ml-2">→</span>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Real-Time Analytics Bar -->
+                    <div class="mt-6 lg:mt-0 lg:ml-8">
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div class="analytics-card p-4 rounded-lg text-center">
+                                <div id="total-time" class="metric-value">0 hr</div>
+                                <div class="metric-label">Total Planned</div>
+                            </div>
+                            <div class="analytics-card p-4 rounded-lg text-center">
+                                <div id="avg-daily-load" class="metric-value">0 hr</div>
+                                <div class="metric-label">Avg Daily</div>
+                            </div>
+                            <div class="analytics-card p-4 rounded-lg text-center">
+                                <div id="max-load-day" class="metric-value">-</div>
+                                <div class="metric-label">Max Load Day</div>
+                            </div>
+                            <div class="analytics-card p-4 rounded-lg text-center">
+                                <div id="total-tasks" class="metric-value">0</div>
+                                <div class="metric-label">Total Tasks</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Daily Load Distribution -->
+                        <div class="mt-4 analytics-card p-4 rounded-lg">
+                            <div class="metric-label mb-3">Daily Load Distribution</div>
+                            <div class="grid grid-cols-7 gap-2 text-xs">
+                                <div class="text-center">
+                                    <div class="metric-label mb-1">Mon</div>
+                                    <div class="day-bar"><div id="mon-bar" class="day-bar-fill" style="width: 0%"></div></div>
+                                    <div id="mon-count" class="mt-1 text-gray-600">0 hr</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="metric-label mb-1">Tue</div>
+                                    <div class="day-bar"><div id="tue-bar" class="day-bar-fill" style="width: 0%"></div></div>
+                                    <div id="tue-count" class="mt-1 text-gray-600">0 hr</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="metric-label mb-1">Wed</div>
+                                    <div class="day-bar"><div id="wed-bar" class="day-bar-fill" style="width: 0%"></div></div>
+                                    <div id="wed-count" class="mt-1 text-gray-600">0 hr</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="metric-label mb-1">Thu</div>
+                                    <div class="day-bar"><div id="thu-bar" class="day-bar-fill" style="width: 0%"></div></div>
+                                    <div id="thu-count" class="mt-1 text-gray-600">0 hr</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="metric-label mb-1">Fri</div>
+                                    <div class="day-bar"><div id="fri-bar" class="day-bar-fill" style="width: 0%"></div></div>
+                                    <div id="fri-count" class="mt-1 text-gray-600">0 hr</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="metric-label mb-1">Sat</div>
+                                    <div class="day-bar"><div id="sat-bar" class="day-bar-fill" style="width: 0%"></div></div>
+                                    <div id="sat-count" class="mt-1 text-gray-600">0 hr</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="metric-label mb-1">Sun</div>
+                                    <div class="day-bar"><div id="sun-bar" class="day-bar-fill" style="width: 0%"></div></div>
+                                    <div id="sun-count" class="mt-1 text-gray-600">0 hr</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <form id="weekly-goals-form">
+                <div id="goals-container" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <!-- Goal cards are dynamically inserted here -->
+                </div>
+                
+                <!-- Add Goal Button -->
+                <div class="mt-8 flex justify-center">
+                    <button type="button" id="add-goal-btn" class="enhanced-button inline-flex items-center border border-dashed border-indigo-300 text-sm font-medium rounded-lg text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 px-6 py-4">
+                        <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Add New Goal
+                    </button>
+                </div>
+
+                <div class="mt-10 pt-6 border-t border-gray-200">
+                    <div class="flex justify-end space-x-3">
+                        <a href="/home.html" class="enhanced-button inline-flex items-center border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Cancel</a>
+                        <button type="submit" class="enhanced-button inline-flex items-center border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <svg class="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div id="error-message" class="hidden mt-4 rounded-md bg-red-50 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" /></svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 id="error-text" class="text-sm font-medium text-red-800"></h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <script src="pages/scripts/utils.js"></script>
+    <script src="pages/scripts/navigation.js"></script>
+    <script src="pages/scripts/goals.js"></script>
+</body>
+</html>

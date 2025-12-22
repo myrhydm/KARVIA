@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Journey - Manifestor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/design-system.css">
+    <style>
+        /* Week card styling */
+        .week-card {
+            transition: all 0.3s ease;
+            min-height: 180px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .week-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .week-card.current {
+            animation: subtle-glow 3s ease-in-out infinite alternate;
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+        }
+        
+        @keyframes subtle-glow {
+            0% { box-shadow: 0 4px 20px rgba(59, 130, 246, 0.1); }
+            100% { box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2); }
+        }
+        
+        .week-card.current:hover {
+            transform: scale(1.02) translateY(-2px);
+        }
+        
+        .week-card.completed {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border-left: 4px solid #22c55e;
+        }
+        
+        .week-card.locked {
+            background: #f9fafb;
+            opacity: 0.6;
+        }
+        
+        .week-number {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.875rem;
+        }
+        
+        .week-number.completed {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+        }
+        
+        .week-number.locked {
+            background: #e5e7eb;
+            color: #9ca3af;
+        }
+        
+        /* Progress indicators */
+        .progress-indicator {
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+            transition: width 0.3s ease;
+        }
+        
+        /* Insight and recommendation styling */
+        .insight-item {
+            border-left: 4px solid #3b82f6;
+            background: #f8fafc;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+        
+        .insight-item.positive {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        .recommendation-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.375rem;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            background: white;
+            font-size: 0.875rem;
+        }
+        
+        .recommendation-item.high {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .recommendation-item.medium {
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .recommendation-item.low {
+            border-left: 4px solid #10b981;
+        }
+
+        /* Form styling */
+        .commitment-option.selected,
+        .learning-option.selected {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .slider::-moz-range-thumb {
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
+    <!-- Navigation will be injected here -->
+    <div id="navigation-container"></div>
+
+    <div class="min-h-screen">
+        <!-- Main Content Area -->
+        <div class="p-4 max-w-6xl mx-auto">
+            <!-- Dynamic Header -->
+            <div class="mb-4">
+                <div id="header-section" class="bg-white rounded-lg shadow p-4 border border-gray-100">
+                    <h1 class="text-2xl font-bold text-gray-800 mb-2">My Journey</h1>
+                    <p id="journey-description" class="text-gray-600">Track your transformation journey</p>
+                    <div class="mt-3 flex items-center gap-4">
+                        <div class="bg-blue-50 px-3 py-1 rounded-full">
+                            <span class="text-sm font-medium text-blue-800">Week <span id="current-week">1</span> of <span id="total-weeks">--</span></span>
+                        </div>
+                        <div class="bg-green-50 px-3 py-1 rounded-full">
+                            <span class="text-sm font-medium text-green-800"><span id="completion-percentage">0</span>% Complete</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dream Input Section (shown for new users) -->
+            <div id="dream-input-section" class="mb-8" style="display: none;">
+                <div class="bg-white rounded-lg p-8 shadow-lg border border-gray-100">
+                    <!-- Manifestor Intro Header -->
+                    <div class="text-center mb-8">
+                        <h1 class="text-4xl font-bold text-gray-900 mb-6">
+                            🎬 Welcome to Karvia
+                        </h1>
+                        
+                        <!-- Story Subtext -->
+                        <div class="max-w-2xl mx-auto mb-8">
+                            <p class="text-lg text-gray-700 leading-relaxed italic">
+                                Every meaningful change starts with understanding what you have, 
+                                how to measure progress, and where you're headed.
+                            </p>
+                        </div>
+                        
+                        <!-- Central Hub Design -->
+                        <div class="max-w-5xl mx-auto px-4 sm:px-6 relative py-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+                                <!-- YOUR INPUTS -->
+                                <div class="flex justify-center">
+                                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 sm:p-5 text-center border border-blue-200 shadow-md hover:shadow-lg transition-all duration-300 w-full max-w-xs h-52 sm:h-56">
+                                        <!-- Header section -->
+                                        <div class="mb-3 sm:mb-4">
+                                            <h3 class="font-bold text-gray-900 text-sm sm:text-base tracking-wide">YOUR INPUTS</h3>
+                                            <p class="text-xs sm:text-sm text-gray-600 font-medium mt-1">What you bring to the journey</p>
+                                        </div>
+                                        
+                                        <!-- Icons grid -->
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <div class="flex flex-col items-center">
+                                                <span class="text-2xl sm:text-3xl mb-1">🔁</span>
+                                                <span class="text-xs sm:text-sm text-gray-600 font-medium tracking-wide">Habits</span>
+                                            </div>
+                                            <div class="flex flex-col items-center">
+                                                <span class="text-2xl sm:text-3xl mb-1">🛠️</span>
+                                                <span class="text-xs sm:text-sm text-gray-600 font-medium tracking-wide">Skills</span>
+                                            </div>
+                                            <div class="flex flex-col items-center">
+                                                <span class="text-2xl sm:text-3xl mb-1">⏳</span>
+                                                <span class="text-xs sm:text-sm text-gray-600 font-medium tracking-wide">Time</span>
+                                            </div>
+                                            <div class="flex flex-col items-center">
+                                                <span class="text-2xl sm:text-3xl mb-1">🔥</span>
+                                                <span class="text-xs sm:text-sm text-gray-600 font-medium tracking-wide">Motivation</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- YOUR GROWTH (Center on large screens) -->
+                                <div class="flex justify-center md:order-3 lg:order-2">
+                                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 sm:p-5 text-center border border-purple-200 shadow-md hover:shadow-lg transition-all duration-300 w-full max-w-xs h-64 sm:h-72">
+                                        <!-- Header section -->
+                                        <div class="mb-3 sm:mb-4">
+                                            <h3 class="font-bold text-gray-900 text-sm sm:text-base tracking-wide">YOUR GROWTH</h3>
+                                            <p class="text-xs sm:text-sm text-gray-600 font-medium mt-1">How you track progress</p>
+                                        </div>
+                                        
+                                        <!-- Icons arranged in organized layout -->
+                                        <div class="space-y-2 sm:space-y-3">
+                                            <div class="flex justify-center">
+                                                <div class="flex flex-col items-center">
+                                                    <span class="text-2xl sm:text-3xl mb-1">🔍</span>
+                                                    <span class="text-xs sm:text-sm text-gray-600 font-medium tracking-wide">Clarity</span>
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <div class="flex flex-col items-center">
+                                                    <span class="text-2xl sm:text-3xl mb-1">🔥</span>
+                                                    <span class="text-xs sm:text-sm text-gray-600 font-medium tracking-wide">Commitment</span>
+                                                </div>
+                                                <div class="flex flex-col items-center">
+                                                    <span class="text-2xl sm:text-3xl mb-1">🧠</span>
+                                                    <span class="text-xs sm:text-sm text-gray-600 font-medium tracking-wide">Competency</span>
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <div class="flex flex-col items-center">
+                                                    <span class="text-2xl sm:text-3xl mb-1">🌱</span>
+                                                    <span class="text-xs sm:text-sm text-gray-600 font-medium tracking-wide">Adaptability</span>
+                                                </div>
+                                                <div class="flex flex-col items-center">
+                                                    <span class="text-2xl sm:text-3xl mb-1">📈</span>
+                                                    <span class="text-xs sm:text-sm text-gray-600 font-medium tracking-wide">Opportunity</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- YOUR OBJECTIVE -->
+                                <div class="flex justify-center md:order-2 lg:order-3">
+                                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 sm:p-5 text-center border border-green-200 shadow-md hover:shadow-lg transition-all duration-300 w-full max-w-xs h-52 sm:h-56">
+                                        <!-- Header section -->
+                                        <div class="mb-3 sm:mb-4">
+                                            <h3 class="font-bold text-gray-900 text-sm sm:text-base tracking-wide">YOUR OBJECTIVE</h3>
+                                            <p class="text-xs sm:text-sm text-gray-600 font-medium mt-1">Where you're going</p>
+                                        </div>
+                                        
+                                        <!-- Central icon -->
+                                        <div class="flex flex-col items-center mt-4">
+                                            <span class="text-4xl sm:text-5xl mb-2">🎯</span>
+                                            <span class="text-xs sm:text-sm text-gray-600 font-medium tracking-wide">Target</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Subtle Circular Connection -->
+                            <div class="absolute inset-0 pointer-events-none hidden md:block">
+                                <svg class="w-full h-full" viewBox="0 0 500 300" fill="none">
+                                    <!-- Connecting circle -->
+                                    <circle cx="250" cy="150" r="120" stroke="#d1d5db" stroke-width="1" stroke-dasharray="4,6" opacity="0.25" fill="none"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Transition to Form -->
+                    <div class="text-center mb-8 mt-12">
+                        <p class="text-lg text-gray-700 max-w-2xl mx-auto italic leading-relaxed">
+                            Whether you want to start a new role, launch your own venture, or relocate to a new city - 
+                            every meaningful change starts with a clear objective.
+                        </p>
+                        <h2 class="text-2xl font-bold text-gray-900 mt-6">Let's begin by defining yours.</h2>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        <!-- Objective Text -->
+                        <div class="border-l-4 border-blue-500 pl-6">
+                            <label for="dream-text" class="block text-lg font-bold text-gray-900 mb-2">Your Objective</label>
+                            <p class="text-gray-600 mb-3 italic">"What specific achievement would make you proud to look back on in a year?"</p>
+                            <div class="relative">
+                                <textarea 
+                                    id="dream-text" 
+                                    rows="4" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                                    placeholder="Start by typing your dream (e.g., running my own marketing firm / being a product manager at Google)"
+                                    maxlength="1000"
+                                ></textarea>
+                            </div>
+                            <div class="text-right text-sm text-gray-500 mt-1">
+                                <span id="char-count">0</span>/1000
+                            </div>
+                            
+                            <!-- Smart Suggestions (hidden by default) -->
+                            <div id="dream-suggestions" class="hidden mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <div class="text-sm text-blue-800">
+                                    <span class="font-medium">💡 Suggestion:</span>
+                                    <span id="suggestion-text">Complete your dream by adding missing details</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Objective Template Cards -->
+                            <div class="mt-4">
+                                <p class="text-sm text-gray-600 mb-3">Choose a template that aligns with your objective:</p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <!-- Career Advancement Template -->
+                                    <div class="template-card cursor-pointer p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                                         data-archetype="career"
+                                         data-template="Secure a Product Manager role at a Series B startup in San Francisco, leveraging my UX design experience to lead cross-functional product teams.">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="text-lg">💼</span>
+                                            <span class="text-sm font-semibold text-gray-800">Career Advancement</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600 leading-relaxed">
+                                            "Secure a Product Manager role at a Series B startup<br>
+                                            with $180K+ compensation leading a 5+ person team."
+                                        </p>
+                                    </div>
+                                    
+                                    <!-- Entrepreneurship Template -->
+                                    <div class="template-card cursor-pointer p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 transition-colors"
+                                         data-archetype="entrepreneur"
+                                         data-template="Launch my personal branding consultancy in Austin, serving solopreneurs with storytelling strategies and building a sustainable 6-figure business.">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="text-lg">🚀</span>
+                                            <span class="text-sm font-semibold text-gray-800">Entrepreneurship</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600 leading-relaxed">
+                                            "Launch a personal branding consultancy in Austin<br>
+                                            serving 20+ solopreneurs and generating $150K annually."
+                                        </p>
+                                    </div>
+                                    
+                                    <!-- Location Change Template -->
+                                    <div class="template-card cursor-pointer p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-orange-50 hover:border-orange-300 transition-colors"
+                                         data-archetype="relocation"
+                                         data-template="Relocate to Barcelona and secure a senior marketing role at a European tech company, while maintaining work-life balance and building a new social network.">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="text-lg">🌍</span>
+                                            <span class="text-sm font-semibold text-gray-800">Location Change</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600 leading-relaxed">
+                                            "Relocate to Barcelona and secure a senior marketing role<br>
+                                            with €80K+ salary and 40-hour work weeks."
+                                        </p>
+                                    </div>
+                                    
+                                    <!-- Lifestyle Transformation Template -->
+                                    <div class="template-card cursor-pointer p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors"
+                                         data-archetype="lifestyle"
+                                         data-template="Transition to a remote-first lifestyle while doubling my income as a freelance data scientist, building expertise in AI/ML consulting.">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="text-lg">✨</span>
+                                            <span class="text-sm font-semibold text-gray-800">Lifestyle Transformation</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600 leading-relaxed">
+                                            "Transition to remote freelance data scientist<br>
+                                            earning $200K+ annually with 5+ enterprise clients."
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Timeline and Readiness -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="border-l-4 border-green-500 pl-6">
+                                <label for="confidence-slider" class="block text-lg font-bold text-gray-900 mb-2">
+                                    Current Readiness: <span id="confidence-value">50</span>%
+                                </label>
+                                <p class="text-gray-600 mb-3 italic">"How ready are you to step outside your comfort zone?"</p>
+                                <input 
+                                    type="range" 
+                                    id="confidence-slider" 
+                                    min="10" 
+                                    max="100" 
+                                    value="50" 
+                                    class="w-full h-3 bg-gradient-to-r from-red-200 via-yellow-200 to-green-200 rounded-lg appearance-none cursor-pointer slider"
+                                >
+                            </div>
+                            <div class="border-l-4 border-purple-500 pl-6">
+                                <label for="timeline-slider" class="block text-lg font-bold text-gray-900 mb-2">
+                                    Target Timeline: <span id="timeline-value">6 weeks</span>
+                                </label>
+                                <p class="text-gray-600 mb-3 italic">"Dreams need deadlines. What's realistic for your life?"</p>
+                                <input 
+                                    type="range" 
+                                    id="timeline-slider" 
+                                    min="6" 
+                                    max="52" 
+                                    value="6" 
+                                    step="2"
+                                    class="w-full h-3 bg-gradient-to-r from-blue-200 to-purple-200 rounded-lg appearance-none cursor-pointer slider"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Time Commitment Style -->
+                        <div class="border-l-4 border-orange-500 pl-6">
+                            <label class="block text-lg font-bold text-gray-900 mb-2">Time Commitment Style</label>
+                            <p class="text-gray-600 mb-4 italic">"How do you work best when motivation fades?"</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                                <label class="cursor-pointer commitment-option-label">
+                                    <input type="radio" name="time-commitment" value="micro-burst" checked>
+                                    <div class="commitment-option border-2 border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+                                        <div class="text-center">
+                                            <div class="w-8 h-8 mx-auto mb-2 bg-blue-100 rounded-full flex items-center justify-center">
+                                                <span class="text-blue-600 text-sm">⚡</span>
+                                            </div>
+                                            <h4 class="font-medium text-gray-800 mb-1">Micro Burst</h4>
+                                            <p class="text-xs text-gray-600">15-30 min sessions</p>
+                                        </div>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer commitment-option-label">
+                                    <input type="radio" name="time-commitment" value="focused-blocks">
+                                    <div class="commitment-option border-2 border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+                                        <div class="text-center">
+                                            <div class="w-8 h-8 mx-auto mb-2 bg-green-100 rounded-full flex items-center justify-center">
+                                                <span class="text-green-600 text-sm">🎯</span>
+                                            </div>
+                                            <h4 class="font-medium text-gray-800 mb-1">Focused Blocks</h4>
+                                            <p class="text-xs text-gray-600">1-2 hour sessions</p>
+                                        </div>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer commitment-option-label">
+                                    <input type="radio" name="time-commitment" value="flexible-flow">
+                                    <div class="commitment-option border-2 border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+                                        <div class="text-center">
+                                            <div class="w-8 h-8 mx-auto mb-2 bg-purple-100 rounded-full flex items-center justify-center">
+                                                <span class="text-purple-600 text-sm">🌊</span>
+                                            </div>
+                                            <h4 class="font-medium text-gray-800 mb-1">Flexible Flow</h4>
+                                            <p class="text-xs text-gray-600">Max 3 hours per day</p>
+                                        </div>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer commitment-option-label">
+                                    <input type="radio" name="time-commitment" value="beast-mode">
+                                    <div class="commitment-option border-2 border-gray-200 rounded-lg p-4 hover:border-red-300 transition-colors">
+                                        <div class="text-center">
+                                            <div class="w-8 h-8 mx-auto mb-2 bg-red-100 rounded-full flex items-center justify-center">
+                                                <span class="text-red-600 text-sm">🔥</span>
+                                            </div>
+                                            <h4 class="font-medium text-gray-800 mb-1">Beast Mode</h4>
+                                            <p class="text-xs text-gray-600">6 hours of effort per day</p>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Generate Journey Button -->
+                        <div class="text-center">
+                            <button id="generate-plan" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-4 px-6 rounded-xl text-lg font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-out">
+                                🎯 I Am Ready to Commit - Create My Action Plan
+                                <div class="text-sm font-normal opacity-90 mt-1">Generate My Objective Plan • ~60s</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Grid Layout (8-Week Journey Overview) -->
+            <div id="journey-overview-section" class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                <!-- Sidebar -->
+                <div class="space-y-4">
+                    <!-- Your Profile -->
+                    <div class="bg-white rounded-lg shadow p-4">
+                        <h3 class="font-semibold text-gray-800 mb-4">Your Profile</h3>
+                        
+                        <!-- User Dream Section -->
+                        <div class="mb-4">
+                            <h4 class="font-medium text-gray-800 mb-2 text-sm">Your Dream</h4>
+                            <div id="user-dream" class="text-sm text-gray-600 bg-gray-50 rounded p-3 italic">
+                                Loading...
+                            </div>
+                        </div>
+
+                        <!-- Stage Indicator -->
+                        <div class="mb-4">
+                            <div id="stage-indicator" class="stage-indicator discovery bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium text-center">
+                                <span id="stage-name">Self Discovery</span>
+                            </div>
+                            <div id="daily-message" class="text-sm text-gray-600 text-center mt-2">
+                                Ready to visit your dream today?
+                            </div>
+                        </div>
+
+                        <!-- Self Discovery Progress -->
+                        <div id="discovery-metrics" class="space-y-2 mb-4">
+                            <h4 class="font-medium text-gray-800 mb-3 text-sm">Self Discovery Progress</h4>
+                            
+                            <!-- Clarity Score -->
+                            <div class="bg-blue-50 rounded p-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs font-medium text-blue-800 flex items-center">
+                                        🔍 Clarity
+                                    </span>
+                                    <span id="clarity-score" class="text-xs font-bold text-blue-600">--</span>
+                                </div>
+                                <div class="text-xs text-blue-600 mt-1 opacity-75">Goal & path definition</div>
+                            </div>
+
+                            <!-- Commitment Score -->
+                            <div class="bg-red-50 rounded p-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs font-medium text-red-800 flex items-center">
+                                        🔥 Commitment
+                                    </span>
+                                    <span id="commitment-score" class="text-xs font-bold text-red-600">--</span>
+                                </div>
+                                <div class="text-xs text-red-600 mt-1 opacity-75">Consistency & follow-through</div>
+                            </div>
+
+                            <!-- Adaptability Score -->
+                            <div class="bg-green-50 rounded p-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs font-medium text-green-800 flex items-center">
+                                        🌱 Adaptability
+                                    </span>
+                                    <span id="growth-readiness-score" class="text-xs font-bold text-green-600">--</span>
+                                </div>
+                                <div class="text-xs text-green-600 mt-1 opacity-75">Openness to adapt & learn</div>
+                            </div>
+
+                            <!-- Competency Score (Locked) -->
+                            <div class="bg-gray-50 rounded p-2 opacity-60">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs font-medium text-gray-600 flex items-center">
+                                        🧠 Competency
+                                        <span class="ml-1 text-xs bg-gray-200 px-1 rounded">LOCKED</span>
+                                    </span>
+                                    <span id="competency-score" class="text-xs font-bold text-gray-500">--</span>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1">Unlocks in next stage</div>
+                            </div>
+
+                            <!-- Opportunity Score (Locked) -->
+                            <div class="bg-gray-50 rounded p-2 opacity-60">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs font-medium text-gray-600 flex items-center">
+                                        📈 Opportunity
+                                        <span class="ml-1 text-xs bg-gray-200 px-1 rounded">LOCKED</span>
+                                    </span>
+                                    <span id="opportunity-score" class="text-xs font-bold text-gray-500">--</span>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1">Unlocks in next stage</div>
+                            </div>
+                        </div>
+
+                        <!-- Overall Progress Summary -->
+                        <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-medium text-gray-700">Overall Score</span>
+                                <div class="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+                                    <span id="overall-score">0%</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium text-gray-700">Current Focus</span>
+                                <span id="current-focus" class="text-sm font-bold text-purple-600">Self Discovery</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Content Area -->
+                <div class="lg:col-span-3 space-y-6">
+                    <!-- Dynamic Journey Cards -->
+                    <div class="bg-white rounded-lg shadow p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 id="journey-title" class="font-semibold text-gray-800">Loading Journey...</h3>
+                        
+                        <!-- Motivational Button - Right Corner -->
+                        <div id="weekly-plan-cta" class="hidden">
+                            <a href="goals.html" class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-emerald-600 transform hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg">
+                                <span class="mr-2">🎯</span>
+                                Plan This Week
+                                <span class="ml-2">→</span>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress Overview -->
+                    <div class="mb-6">
+                        <div class="progress-indicator">
+                            <div class="progress-fill" id="overall-progress-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>Start</span>
+                            <span id="journey-end-label">Complete</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Loading State -->
+                    <div id="journey-cards-loading" class="text-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                        <p class="text-gray-500">Loading your journey plan...</p>
+                    </div>
+                    
+                    <!-- Week Cards Grid (Dynamic) -->
+                    <div id="journey-cards-container" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Cards will be generated dynamically -->
+                    </div>
+                    
+                    <!-- 21-Day Achievement Banner -->
+                    <div id="day21-achievement" class="hidden mt-6 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <div class="text-2xl mr-3">🎉</div>
+                            <div>
+                                <h4 class="font-bold text-green-800">21-Day Milestone!</h4>
+                                <p class="text-sm text-green-700">You've built the foundation for lasting change. Keep the momentum going!</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Error State -->
+                    <div id="journey-cards-error" class="hidden text-center py-8">
+                        <div class="text-red-500 mb-2">⚠️</div>
+                        <p class="text-gray-600">Unable to load your journey plan</p>
+                        <button id="retry-journey-cards" class="text-blue-600 hover:underline text-sm mt-2">Retry</button>
+                    </div>
+                    </div>
+
+                    <!-- Insights and Recommendations Section -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Insights -->
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">📊 Insights</h3>
+                            <div id="insights-container" class="space-y-3">
+                                <div class="insight-item positive">
+                                    <div class="font-medium text-green-800 mb-1">Strong Start</div>
+                                    <div class="text-green-700">You're maintaining consistency in your daily activities</div>
+                                </div>
+                                <div class="insight-item">
+                                    <div class="font-medium text-blue-800 mb-1">Learning Pattern</div>
+                                    <div class="text-blue-700">Focus areas align well with your career goals</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recommendations -->
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">💡 Recommendations</h3>
+                            <div id="recommendations-container" class="space-y-3">
+                                <div class="text-sm text-gray-500 text-center py-4">
+                                    Personalized recommendations will appear here.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Week Details Modal -->
+    <div id="week-details-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-screen overflow-hidden">
+            <div class="flex justify-between items-center p-6 border-b">
+                <div>
+                    <h2 id="week-modal-title" class="text-2xl font-bold text-gray-900"></h2>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span id="week-modal-ai-badge"></span>
+                        <span id="week-modal-status" class="text-sm text-gray-600"></span>
+                    </div>
+                </div>
+                <button id="close-week-modal" class="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+            </div>
+            
+            <div class="max-h-96 overflow-y-auto">
+                <div class="p-6">
+                    <!-- Week Analysis -->
+                    <div id="week-modal-analysis" class="mb-6"></div>
+                    
+                    <!-- Progress Overview -->
+                    <div id="week-modal-progress" class="mb-6"></div>
+                    
+                    <!-- Goals and Tasks -->
+                    <div id="week-modal-goals" class="mb-6"></div>
+                    
+                    <!-- Learning Resources -->
+                    <div id="week-modal-resources" class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">📚 Learning Resources</h3>
+                        <div id="week-modal-resources-content" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    </div>
+                    
+                    <!-- Time Commitment -->
+                    <div id="week-modal-time" class="mb-4"></div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 px-6 py-4 flex justify-end">
+                <button id="week-modal-close-btn" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p class="text-gray-600">Loading your journey...</p>
+        </div>
+    </div>
+
+    <script src="pages/scripts/utils.js"></script>
+    <script src="pages/scripts/trackingClient.js"></script>
+    <script src="pages/scripts/navigation.js"></script>
+    <script src="pages/scripts/my_journey.js"></script>
+</body>
+</html>
