@@ -1,0 +1,365 @@
+# ACCESS_CONTROL.yaml - Central Access Control Configuration
+# Version: 1.0.0
+# Last Updated: December 20, 2025
+# Status: STRUCTURE_ONLY (Enforcement planned for future)
+# Owner: Admin (Human only - Claude cannot modify)
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# PURPOSE: Define access rules for all documents using Doc ID system
+# LOCATION: .claude/ACCESS_CONTROL.yaml
+# ENFORCEMENT: Future - Currently advisory only
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ───────────────────────────────────────────────────────────────────────────────
+# SYSTEM CONFIGURATION
+# ───────────────────────────────────────────────────────────────────────────────
+system:
+  version: "1.0.0"
+  enforcement_mode: "advisory"  # advisory | soft | hard
+  audit_enabled: true
+  owner: "admin"
+
+  # Future enforcement modes:
+  # - advisory: Log only, no blocking
+  # - soft: Warn and require confirmation
+  # - hard: Block without explicit override
+
+# ───────────────────────────────────────────────────────────────────────────────
+# DOC ID SCHEMA
+# ───────────────────────────────────────────────────────────────────────────────
+# Format: DOC-[TIER]-[DOMAIN]-[SEQ]
+# Example: DOC-T2-ENG-001
+#
+# TIERS:
+#   T1 = Constitutional (MVG, supreme authority)
+#   T2 = Canonical (single source of truth per domain)
+#   T3 = Derived (must align with T2)
+#   T4 = Working (drafts, incomplete)
+#
+# DOMAINS:
+#   GOV = Governance
+#   SEC = Security
+#   ENG = Engine
+#   API = API/Contracts
+#   PRD = Product
+#   ARC = Architecture
+#   VIS = Vision
+#   RUN = Runtime
+#   TST = Testing
+#   DOC = Documentation
+
+doc_id_schema:
+  format: "DOC-{tier}-{domain}-{sequence}"
+  tiers: ["T1", "T2", "T3", "T4"]
+  domains:
+    GOV: "Governance"
+    SEC: "Security"
+    ENG: "Engine"
+    API: "API/Contracts"
+    PRD: "Product"
+    ARC: "Architecture"
+    VIS: "Vision"
+    RUN: "Runtime"
+    TST: "Testing"
+    DOC: "Documentation"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# GLOBAL DEFAULTS
+# ───────────────────────────────────────────────────────────────────────────────
+defaults:
+  read: "ALL"
+  write: "ALL"
+  approve: "ADMIN"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# TIER-LEVEL ACCESS RULES
+# ───────────────────────────────────────────────────────────────────────────────
+tiers:
+  T1:
+    name: "Constitutional"
+    description: "Supreme authority - MVG and governance foundations"
+    read: "ALL"
+    write: "NONE"
+    approve: "ADMIN"
+    escalation: "REQUIRED"
+    modification_process: "Formal amendment required"
+
+  T2:
+    name: "Canonical"
+    description: "Single source of truth per domain"
+    read: "ALL"
+    write: ["STRATEGY", "ADMIN"]
+    approve: ["STRATEGY", "ADMIN"]
+    escalation: "RECOMMENDED"
+
+  T3:
+    name: "Derived"
+    description: "Derived from T2, must align with canonical"
+    read: "ALL"
+    write: ["STRATEGY", "CODING", "ADMIN"]
+    approve: "SELF"
+    escalation: "OPTIONAL"
+
+  T4:
+    name: "Working"
+    description: "Drafts, notes, incomplete work"
+    read: "ALL"
+    write: "ALL"
+    approve: "SELF"
+    escalation: "NONE"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# DOMAIN-LEVEL ACCESS RULES (Override tier defaults)
+# ───────────────────────────────────────────────────────────────────────────────
+domains:
+  GOV:
+    name: "Governance"
+    write: ["ADMIN"]
+    approve: "ADMIN"
+    audit_required: true
+    notes: "Core governance documents - admin only"
+
+  SEC:
+    name: "Security"
+    write: ["ADMIN"]
+    approve: "ADMIN"
+    audit_required: true
+    notes: "Security-sensitive documents - restricted"
+
+  ENG:
+    name: "Engine"
+    write: ["STRATEGY", "CODING", "ADMIN"]
+    notes: "Engine strategy and implementation docs"
+
+  API:
+    name: "API/Contracts"
+    write: ["STRATEGY", "CODING", "ADMIN"]
+    notes: "API specifications and contracts"
+
+  PRD:
+    name: "Product"
+    write: ["STRATEGY", "ADMIN"]
+    notes: "Product strategy documents"
+
+  ARC:
+    name: "Architecture"
+    write: ["STRATEGY", "ADMIN"]
+    notes: "Architecture decisions and patterns"
+
+  VIS:
+    name: "Vision"
+    write: ["STRATEGY", "ADMIN"]
+    notes: "Future vision and roadmap"
+
+  RUN:
+    name: "Runtime"
+    write: ["STRATEGY", "CODING", "ADMIN"]
+    notes: "Runtime orchestration and operations"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# SESSION PROFILES
+# ───────────────────────────────────────────────────────────────────────────────
+profiles:
+  STRATEGY:
+    description: "Planning, architecture, specifications"
+    can_read: ["DOC-T1-*", "DOC-T2-*", "DOC-T3-*", "DOC-T4-*"]
+    can_write: ["DOC-T2-*", "DOC-T3-*", "DOC-T4-*"]
+    cannot_write: ["DOC-T1-*", "DOC-*-SEC-*", "DOC-*-GOV-*"]
+    requires_approval: ["DOC-T2-*"]
+
+  CODING:
+    description: "Implementation, bug fixes, features"
+    can_read: ["DOC-T1-*", "DOC-T2-*", "DOC-T3-*", "DOC-T4-*"]
+    can_write: ["DOC-T3-*", "DOC-T4-*"]
+    cannot_write: ["DOC-T1-*", "DOC-T2-*", "DOC-*-SEC-*", "DOC-*-GOV-*"]
+
+  AUDIT:
+    description: "Code review, quality validation"
+    can_read: ["DOC-*"]
+    can_write: ["DOC-T4-*"]
+    cannot_write: ["DOC-T1-*", "DOC-T2-*", "DOC-T3-*"]
+    notes: "Read-heavy profile, minimal writes"
+
+  TESTING:
+    description: "Test execution, bug detection"
+    can_read: ["DOC-*"]
+    can_write: ["DOC-T3-TST-*", "DOC-T4-*"]
+
+  GENERAL:
+    description: "Research, questions, quick fixes"
+    can_read: ["DOC-*"]
+    can_write: ["DOC-T4-*"]
+    notes: "Most restricted write access"
+
+  ADMIN:
+    description: "Full access - human admin only"
+    can_read: ["DOC-*"]
+    can_write: ["DOC-*"]
+    can_approve: ["DOC-*"]
+    bypass_escalation: true
+    notes: "Reserved for human admin"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# DOCUMENT-LEVEL OVERRIDES (Sparse - only exceptions)
+# ───────────────────────────────────────────────────────────────────────────────
+# Add specific document overrides here when needed
+# Full registry: IBRAIN_STRATEGY/1-PRODUCT/strategy/05-governance/DOC_ID_REGISTRY.md
+documents:
+  # T1: Constitutional (Supreme Authority)
+  DOC-T1-GOV-001:
+    name: "MVG - Minimum Viable Governance"
+    path: "strategy/00-constitutional/MVG_MINIMUM_VIABLE_GOVERNANCE.md"
+    write: "NONE"
+    approve: "ADMIN"
+    locked: false
+    notes: "Constitutional document - formal amendment only"
+
+  # T2: Security (Restricted)
+  DOC-T2-SEC-001:
+    name: "Security Architecture"
+    path: "strategy/01-authoritative/SECURITY_ARCHITECTURE.md"
+    write: ["ADMIN"]
+    approve: "ADMIN"
+    notes: "Security-sensitive - admin approval required"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# CONTEXT LOADING PROFILES
+# ───────────────────────────────────────────────────────────────────────────────
+# Defines which documents each command should load
+context_loading:
+  strategy:
+    always_load:
+      - "DOC-T1-GOV-*"        # Constitutional (MVG)
+    load_by_type:
+      sprint_planning:
+        - "DOC-T2-PRD-*"      # Product strategy
+        - "DOC-T2-*-PHASE*"   # Phase gates
+      architecture:
+        - "DOC-T2-ARC-*"      # Architecture
+        - "DOC-T2-API-*"      # API contracts
+      feature_spec:
+        - "DOC-T2-PRD-*"      # Product
+        - "DOC-T2-ENG-*"      # Engine master
+      documentation:
+        - "DOC-T2-DOC-*"      # Doc governance
+
+  coding:
+    always_load:
+      - "DOC-T1-GOV-*"        # Constitutional
+    load_by_type:
+      engine_work:
+        - "DOC-T2-ENG-*"      # Engine master
+        - "DOC-T2-RUN-*"      # Runtime
+        - "DOC-T3-*"          # Relevant engine
+      api_work:
+        - "DOC-T2-API-*"      # API contracts
+        - "DOC-T2-SEC-*"      # Security
+      service_work:
+        - "DOC-T2-ARC-*"      # Architecture
+
+  audit:
+    always_load:
+      - "DOC-T1-GOV-*"        # Constitutional
+      - "DOC-T2-DOC-*"        # Doc governance
+    load_by_scope:
+      security_audit:
+        - "DOC-T2-SEC-*"      # Security
+      document_health:
+        - "DOC-*-DOC-*"       # All doc governance
+
+# ───────────────────────────────────────────────────────────────────────────────
+# ESCALATION RULES (Future enforcement)
+# ───────────────────────────────────────────────────────────────────────────────
+escalation:
+  T1_modification:
+    require:
+      - "user_confirmation"
+      - "admin_approval"
+    notify: ["admin"]
+    audit: true
+    block_without_approval: true  # Future: hard enforcement
+
+  T2_modification:
+    require:
+      - "user_confirmation"
+    notify: []
+    audit: true
+    block_without_approval: false
+
+  security_domain:
+    require:
+      - "user_confirmation"
+      - "admin_approval"
+    notify: ["admin"]
+    audit: true
+
+  governance_domain:
+    require:
+      - "user_confirmation"
+      - "admin_approval"
+    notify: ["admin"]
+    audit: true
+
+# ───────────────────────────────────────────────────────────────────────────────
+# TEMPORARY GRANTS (Future feature)
+# ───────────────────────────────────────────────────────────────────────────────
+# Admin can grant temporary access that expires
+temporary_grants: []
+  # Example:
+  # - profile: "CODING"
+  #   permission: "write"
+  #   document: "DOC-T2-SEC-001"
+  #   granted_by: "admin"
+  #   granted_at: "2025-12-20T19:00:00Z"
+  #   expires: "2025-12-21T00:00:00Z"
+  #   reason: "Emergency security fix"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# LOCKS (Future feature)
+# ───────────────────────────────────────────────────────────────────────────────
+# Admin can lock documents or domains
+locks: []
+  # Example:
+  # - target: "DOC-T2-SEC-*"
+  #   type: "domain"
+  #   locked_by: "admin"
+  #   locked_at: "2025-12-20T19:00:00Z"
+  #   reason: "Security audit in progress"
+  #   expires: null  # Manual unlock required
+
+# ───────────────────────────────────────────────────────────────────────────────
+# AUDIT LOG CONFIGURATION (Future feature)
+# ───────────────────────────────────────────────────────────────────────────────
+audit_config:
+  enabled: true
+  log_reads: false      # Only log writes by default
+  log_writes: true
+  log_approvals: true
+  log_escalations: true
+  log_file: ".claude/logs/access_audit.log"  # Future
+  retention_days: 90
+
+# ───────────────────────────────────────────────────────────────────────────────
+# NOTES FOR FUTURE IMPLEMENTATION
+# ───────────────────────────────────────────────────────────────────────────────
+#
+# PHASE 1 (Current): Structure only
+#   - Define all rules and schemas
+#   - No enforcement
+#   - Manual doc ID assignment
+#
+# PHASE 2 (Next): Advisory mode
+#   - Commands check ACCESS_CONTROL before operations
+#   - Warn on violations but don't block
+#   - Log all access attempts
+#
+# PHASE 3 (Later): Soft enforcement
+#   - Require confirmation for restricted operations
+#   - Block T1 modifications without explicit override
+#   - Track all escalations
+#
+# PHASE 4 (Future): Hard enforcement
+#   - Block unauthorized operations
+#   - Require admin approval for sensitive changes
+#   - Full audit trail
+#   - Admin dashboard for access management
