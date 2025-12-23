@@ -19,9 +19,12 @@ create-test-user.js
 # MongoDB memory server binaries
 **/mongo-binaries/mongod-*
 
-# Documentation (temporary)
+# Documentation - Exclude temp docs but allow strategy/governance
 *.md
 !README.md
+!KARVIA_STRATEGY/**/*.md
+!KARVIA_IMPLEMENTATION/**/*.md
+!.claude/**/*.md
 docs/pitch-deck/archive/
 .bramhi.log
 .bramhi.run.log

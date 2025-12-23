@@ -214,6 +214,52 @@ Response:
 
 ---
 
+## Documentation & Governance
+
+This project uses Claude Code for AI-assisted development with structured governance.
+
+### Documentation Structure
+
+```
+KARVIA/
+├── .claude/                    # Claude Code configuration
+│   ├── commands/               # Slash commands (/init, /close, etc.)
+│   ├── templates/              # Document templates
+│   └── CODEBASE_STRUCTURE.md   # Technical architecture
+│
+├── KARVIA_STRATEGY/            # Strategic documentation
+│   ├── 1-PRODUCT/              # Product strategy & governance
+│   ├── 2-TECHNICAL/            # Technical specifications
+│   └── 3-DELIVERY/             # Sprints, releases, handoffs
+│
+└── KARVIA_IMPLEMENTATION/      # Implementation documentation
+    ├── 1-SERVICES/             # Service specifications
+    ├── 2-ENGINES/              # Engine documentation
+    ├── 3-TESTING/              # Test documentation
+    └── 4-SDK/                  # SDK & integration guides
+```
+
+### Key Documents
+
+| Document | Location | Purpose |
+|----------|----------|---------|
+| MVG_KARVIA.md | KARVIA_STRATEGY/1-PRODUCT/strategy/00-constitutional/ | Governance rules |
+| CODEBASE_STRUCTURE.md | .claude/ | Technical architecture |
+| INITIAL_BACKLOG.md | KARVIA_STRATEGY/3-DELIVERY/sprints/ | Product backlog |
+
+### Claude Code Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/init` | Start a development session |
+| `/close` | End session with handoff document |
+| `/strategy` | Strategic planning mode |
+| `/coding` | Development mode |
+| `/audit` | Quality audit |
+| `/testing` | Test mode |
+
+---
+
 ## License
 
 ISC
