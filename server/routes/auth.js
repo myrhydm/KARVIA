@@ -15,6 +15,7 @@ const Task = require('../models/Task');
 const auth = require('../middleware/auth');
 const TrackingUtils = require('../utils/trackingUtils');
 const defaultJourneyTasks = require('../config/defaultJourneyTasks');
+const logger = require('../utils/logger');
 
 // Create default journey tasks for new users
 async function createDefaultJourneyTasks(userId) {
@@ -53,11 +54,11 @@ async function createDefaultJourneyTasks(userId) {
         }));
 
         await Task.insertMany(tasksToCreate);
-        console.log(`✅ Created ${tasksToCreate.length} default journey tasks for user ${userId}`);
-        
+        logger.info({ userId, count: tasksToCreate.length }, 'Created default journey tasks');
+
         return tasksToCreate.length;
     } catch (error) {
-        console.error('❌ Error creating default journey tasks:', error);
+        logger.error({ error: error.message, userId }, 'Error creating default journey tasks');
         throw error;
     }
 }
@@ -101,7 +102,6 @@ router.post(
             // Create default journey tasks for new user
             try {
                 const taskTotal = await createDefaultJourneyTasks(user.id);
-                console.log(`🎯 Default tasks created for new user: ${user.name}`);
 
                 // Track task creation
                 await TrackingUtils.trackTaskGoal('task_creation', user.id, {
@@ -110,7 +110,7 @@ router.post(
                     automated: true
                 });
             } catch (taskError) {
-                console.warn('⚠️ Failed to create default tasks, but user creation succeeded:', taskError.message);
+                logger.warn({ error: taskError.message, userId: user.id }, 'Failed to create default tasks');
             }
 
             // Track user signup
@@ -132,15 +132,15 @@ router.post(
                 { expiresIn: process.env.JWT_EXPIRATION || '7d' },
                 (err, token) => {
                     if (err) throw err;
-                    res.json({ 
+                    res.json({
                         token,
                         name: user.name,
-                        onboardingCompleted: user.onboardingCompleted 
+                        onboardingCompleted: user.onboardingCompleted
                     });
                 }
             );
         } catch (err) {
-            console.error(err.message);
+            logger.error({ error: err.message }, 'Signup error');
             res.status(500).send('Server error');
         }
     }
@@ -186,9 +186,7 @@ router.post(
                 user.loginCount = (user.loginCount || 0) + 1;
                 user.lastLogin = new Date();
                 await user.save();
-                
-                console.log(`📅 User ${user.name} login count updated to: ${user.loginCount}`);
-                
+
                 // Track daily login with comprehensive data
                 await TrackingUtils.trackAuth('daily_login', user.id, {
                     loginCount: user.loginCount,
@@ -198,7 +196,6 @@ router.post(
                     loginCountGrowth: user.loginCount > 1 ? 1 : 0
                 });
             } else {
-                console.log(`📅 User ${user.name} already logged in today, count remains: ${user.loginCount || 1}`);
                 
                 // Track repeat login
                 await TrackingUtils.trackAuth('repeat_login', user.id, {

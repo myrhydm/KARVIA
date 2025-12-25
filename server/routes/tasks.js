@@ -10,6 +10,7 @@ const Task = require('../models/Task');
 const WeeklyGoal = require('../models/WeeklyGoal');
 const { willExceedLimits } = require('../utils/limits');
 const { getStartOfNextWeek } = require('../utils/date');
+const logger = require('../utils/logger');
 
 router.post('/', auth, async (req, res) => {
     const { goalId, name, estTime, day } = req.body;
@@ -74,53 +75,40 @@ router.post('/', auth, async (req, res) => {
 });
 
 router.get('/:id', auth, async (req, res) => {
-    console.log('GET /api/tasks/:id - Request received for task ID:', req.params.id);
-    console.log('User ID from auth:', req.user?.id);
-    
     try {
         const userId = req.user?.id || req.userId;
         const task = await Task.findById(req.params.id);
-        
-        console.log('Found task:', task ? 'Yes' : 'No');
-        if (task) {
-            console.log('Task user ID:', task.user.toString());
-            console.log('Request user ID:', userId);
-            console.log('User match:', task.user.toString() === userId);
-        }
-        
+
         if (!task) return res.status(404).json({ msg: 'Task not found' });
         if (task.user.toString() !== userId) {
-            console.log('Authorization failed - user mismatch');
             return res.status(401).json({ msg: 'User not authorized' });
         }
-        
+
         // Enhanced task response with computed insights
         const enhancedTask = {
             ...task.toObject(),
-            
+
             // Computed insights (no database changes needed)
             computedInsights: {
-                timeEfficiency: task.timeSpent && task.estTime ? 
+                timeEfficiency: task.timeSpent && task.estTime ?
                     (task.timeSpent / task.estTime * 100).toFixed(1) + '%' : null,
-                
-                progressStatus: task.completed ? 'completed' : 
+
+                progressStatus: task.completed ? 'completed' :
                     (task.timeSpent > 0 ? 'in_progress' : 'not_started'),
-                    
-                familiarityDisplay: task.userFamiliarity ? 
-                    task.userFamiliarity.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 
+
+                familiarityDisplay: task.userFamiliarity ?
+                    task.userFamiliarity.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) :
                     'Not Rated',
-                    
+
                 suggestedNextSteps: generateTaskSuggestions(task, userId),
-                
+
                 contextualTips: generateContextualTips(task)
             }
         };
 
-        console.log('Returning enhanced task with insights');
         res.json(enhancedTask);
     } catch (err) {
-        console.error('Error in GET task:', err.message);
-        console.error('Full error:', err);
+        logger.error({ error: err.message, taskId: req.params.id }, 'Error fetching task');
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Task not found' });
         }
@@ -160,24 +148,9 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 router.patch('/:id/complete', auth, async (req, res) => {
-    console.log('PATCH /api/tasks/:id/complete - Request received for task ID:', req.params.id);
-    console.log('User ID from auth:', req.user?.id);
-    console.log('Request body:', req.body);
-    
     try {
         // Find the task by its ID
         let task = await Task.findById(req.params.id);
-        
-        console.log('Found task:', task ? 'Yes' : 'No');
-        if (task) {
-            console.log('Task before update:', {
-                id: task._id,
-                name: task.name,
-                completed: task.completed,
-                timeSpent: task.timeSpent,
-                user: task.user
-            });
-        }
 
         if (!task) {
             return res.status(404).json({ msg: 'Task not found' });
@@ -186,7 +159,6 @@ router.patch('/:id/complete', auth, async (req, res) => {
         // Ensure the user owns the task
         const userId = req.user?.id || req.userId;
         if (task.user.toString() !== userId) {
-            console.log('Authorization failed - user mismatch');
             return res.status(401).json({ msg: 'User not authorized' });
         }
 
@@ -210,21 +182,10 @@ router.patch('/:id/complete', auth, async (req, res) => {
         }
 
         await task.save();
-        
-        console.log('Task after update:', {
-            id: task._id,
-            name: task.name,
-            completed: task.completed,
-            timeSpent: task.timeSpent,
-            user: task.user
-        });
-        console.log('Task completion successful for:', task.name);
 
         res.json(task);
     } catch (err) {
-        console.error('Error in task completion:', err.message);
-        console.error('Full error:', err);
-        // Handle cases where the ID is not a valid ObjectId
+        logger.error({ error: err.message, taskId: req.params.id }, 'Error completing task');
         if (err.kind === 'ObjectId') {
             return res.status(404).json({ msg: 'Task not found' });
         }

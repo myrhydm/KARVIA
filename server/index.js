@@ -8,47 +8,69 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const hpp = require('hpp');
+const logger = require('./utils/logger');
+const { httpLogger } = require('./utils/logger');
 
 // Load variables from .env and override any existing environment values
 dotenv.config({ path: path.join(__dirname, '..', '.env'), override: true });
 
-// Debug: Confirm that the API key is present without exposing any part of it
-if (process.env.OPENAI_API_KEY) {
-  console.log('🔑 API key loaded');
-} else {
-  console.log('🔑 API key not found');
-}
-const provider = process.env.LLM_PROVIDER || 'openai';
-process.env.LLM_PROVIDER = provider;
-console.log('🤖 LLM Provider:', provider);
+// 2. Environment Validation
+// Validate all required environment variables before starting
+function validateEnvironment() {
+    const errors = [];
+    const warnings = [];
 
-// Ensure OpenAI API key is provided when using the OpenAI provider
-if (provider === 'openai' && !process.env.OPENAI_API_KEY) {
-    console.error('OPENAI_API_KEY is required when LLM_PROVIDER=openai');
-    process.exit(1);
+    // Required variables
+    if (!process.env.MONGO_URI) {
+        errors.push('MONGO_URI is required. Set it in your .env file.');
+    }
+    if (!process.env.JWT_SECRET) {
+        errors.push('JWT_SECRET is required. Set it in your .env file.');
+    }
+
+    // Conditional requirements
+    const provider = process.env.LLM_PROVIDER || 'openai';
+    process.env.LLM_PROVIDER = provider;
+
+    if (provider === 'openai' && !process.env.OPENAI_API_KEY) {
+        errors.push('OPENAI_API_KEY is required when LLM_PROVIDER=openai');
+    }
+
+    // Warnings for optional but recommended
+    if (!process.env.JWT_EXPIRATION) {
+        warnings.push('JWT_EXPIRATION not set, using default: 7d');
+    }
+
+    // Log configuration summary
+    logger.info({ provider }, 'LLM Provider configured');
+    if (process.env.OPENAI_API_KEY) {
+        logger.info('OpenAI API key loaded');
+    }
+
+    // Log warnings
+    warnings.forEach(w => logger.warn(w));
+
+    // Exit on errors
+    if (errors.length > 0) {
+        errors.forEach(e => logger.error(e));
+        logger.error('Environment validation failed. Please fix the above errors.');
+        process.exit(1);
+    }
+
+    logger.info('Environment validation passed');
 }
 
-// 2. Initial Configuration
-// Environment variables are already loaded from the project root .env file
+validateEnvironment();
 
 // Initialize the Express app
 const app = express();
 
 // 3. Connect to MongoDB Database
-// Use the MONGO_URI from the .env file
 const db = process.env.MONGO_URI;
-
-if (!db) {
-    console.error('MONGO_URI is not defined. Please set MONGO_URI in your .env file.');
-    console.log('MONGO_URI:', db);
-    process.exit(1);
-}
-
-// Ensure JWT_SECRET is defined before continuing
-if (!process.env.JWT_SECRET) {
-    console.error('JWT_SECRET is not defined. Please set JWT_SECRET in your .env file.');
-    process.exit(1);
-}
 
 // Set the Mongoose option to suppress the deprecation warning.
 mongoose.set('strictQuery', true);
@@ -58,21 +80,73 @@ mongoose.connect(db, {
     useUnifiedTopology: true,
 })
 .then(async () => {
-    console.log('MongoDB Connected Successfully');
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`Database: ${mongoose.connection.name}`);
+    logger.info({
+        database: mongoose.connection.name,
+        environment: process.env.NODE_ENV || 'development'
+    }, 'MongoDB connected successfully');
 })
 .catch(err => {
-    console.error('MongoDB Connection Error:', err.message);
-    console.error('MONGO_URI:', db ? `${db.substring(0, 30)}...` : 'undefined');
-    // Exit process with failure
+    logger.error({ error: err.message }, 'MongoDB connection failed');
     process.exit(1);
 });
 
 // 4. Initialize Middleware
-// This allows the app to accept JSON in the request body
-app.use(express.json({ extended: false }));
 
+// Security: Set various HTTP headers for protection
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "https://api.openai.com"],
+        },
+    },
+    crossOriginEmbedderPolicy: false, // Allow embedding for development
+}));
+
+// Security: Sanitize user input to prevent NoSQL injection
+app.use(mongoSanitize());
+
+// Security: Prevent HTTP Parameter Pollution
+app.use(hpp());
+
+// This allows the app to accept JSON in the request body
+app.use(express.json({ extended: false, limit: '10kb' }));
+
+// HTTP request logging
+app.use(httpLogger);
+
+// Global rate limiter: 100 requests per 15 minutes per IP
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { msg: 'Too many requests, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use('/api', globalLimiter);
+
+// Strict rate limiter for auth endpoints: 5 login attempts per 15 minutes
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { msg: 'Too many authentication attempts, please try again in 15 minutes' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: true, // Only count failed attempts
+});
+
+// Strict rate limiter for registration: 3 per hour per IP
+const registerLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 3,
+    message: { msg: 'Too many account creation attempts, please try again in an hour' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 // 5. Define API Routes
 // All routes will be prefixed with '/api'
@@ -101,6 +175,9 @@ const consumerJourneyRoutes = require('./routes/consumer-journey');
 // Import reflection routes
 const reflectionRoutes = require('./api/routes/reflections');
 
+// Apply strict rate limiting to auth endpoints
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/signup', registerLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/home', homeRoutes);
 app.use('/api/weeklyGoals', weeklyGoalRoutes);
@@ -170,18 +247,12 @@ app.use(express.static(path.join(__dirname, '..')));
 
 // Global error handler
 app.use((err, req, res, next) => {
-    console.error('Unhandled error:', err);
-
-    // Log more details in development
-    if (process.env.NODE_ENV !== 'production') {
-        console.error('Stack trace:', err.stack);
-        console.error('Request details:', {
-            method: req.method,
-            url: req.url,
-            body: req.body,
-            headers: req.headers
-        });
-    }
+    logger.error({
+        error: err.message,
+        stack: err.stack,
+        method: req.method,
+        url: req.url,
+    }, 'Unhandled error');
 
     res.status(500).json({
         msg: 'Internal server error',
@@ -205,4 +276,6 @@ app.get('*', (req, res, next) => {
 // Use the PORT from the .env file, or default to 5001
 const PORT = process.env.PORT || 5001;
 
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+app.listen(PORT, () => {
+    logger.info({ port: PORT, environment: process.env.NODE_ENV || 'development' }, 'Server started');
+});

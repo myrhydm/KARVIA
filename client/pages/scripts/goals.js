@@ -714,18 +714,10 @@ async function fetchExistingGoals(goalId) {
         // Prevent duplicate calls within 2 seconds
         const now = Date.now();
         if (now - lastFetchTime < 2000 && lastFetchUrl === url) {
-            console.log('🚫 Preventing duplicate API call:', url);
             return;
         }
         lastFetchTime = now;
         lastFetchUrl = url;
-            
-        // Add unique identifier to track call source
-        const callId = Math.random().toString(36).substr(2, 9);
-        console.log(`📅 [${callId}] Fetching goals with URL:`, url);
-        console.log(`📅 [${callId}] Selected date:`, selected.toISOString());
-        console.log(`📅 [${callId}] Called from page:`, window.location.pathname);
-        console.log(`📅 [${callId}] Stack trace:`, new Error().stack.split('\n')[1]);
         
         const res = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -738,10 +730,6 @@ async function fetchExistingGoals(goalId) {
         }
         
         if (!res.ok) throw new Error(data.msg || 'Failed to load goals');
-        
-        console.log('Frontend: Received goals data:', data);
-        console.log('Frontend: Data type:', Array.isArray(data) ? 'array' : typeof data);
-        console.log('Frontend: Data length:', Array.isArray(data) ? data.length : 'not array');
 
         if (goalId) {
             const goal = data;
@@ -757,24 +745,12 @@ async function fetchExistingGoals(goalId) {
         } else {
             originalGoalsData.clear();
             if (Array.isArray(data)) {
-                console.log('Frontend: Processing goals array with', data.length, 'goals');
-                data.forEach((goal, index) => {
-                    console.log(`Frontend: Goal ${index}:`, {
-                        id: goal._id,
-                        title: goal.title,
-                        tasksCount: Array.isArray(goal.tasks) ? goal.tasks.length : 0,
-                        tasks: goal.tasks
-                    });
-                });
-                
                 fetchedTaskCount = data.reduce((sum, g) => sum + (Array.isArray(g.tasks) ? g.tasks.length : 0), 0);
-                console.log('Frontend: Total fetched task count:', fetchedTaskCount);
-                
+
                 const container = document.getElementById('goals-container');
                 if (container) container.innerHTML = '';
 
                 data.forEach(goal => {
-                    console.log('Frontend: Adding goal card for:', goal.title, 'with tasks:', goal.tasks);
                     addGoalCard(goal);
                     if (goal._id) {
                         storeOriginalGoalData(goal._id, {
@@ -1212,24 +1188,19 @@ async function handleFormSubmit(e) {
 }
 
 async function handleNewWeeklyPlan(token, cards, weekOf) {
-    console.log('Frontend: handleNewWeeklyPlan called');
     const goals = [];
     
     for (const card of cards) {
         const goalData = extractGoalData(card);
-        console.log('Frontend: Extracted goal data:', goalData);
         if (goalData.title.trim()) {
             goals.push(goalData);
         }
     }
 
-    console.log('Frontend: Total goals to save:', goals.length);
     if (goals.length === 0) {
         showError('Please add at least one goal with a title.');
         return;
     }
-
-    console.log('Frontend: Calling batch POST /api/weeklyGoals');
     try {
         const res = await fetch('/api/weeklyGoals', {
             method: 'POST',
@@ -1294,8 +1265,6 @@ async function handleMixedSave(token, cards, weekOf) {
                 }
             } else {
                 // This is a new goal - save it
-                console.log('Frontend: Calling individual POST /api/weeklyGoals/addGoal for new goal');
-                console.log('Frontend: Goal data being sent:', goalData);
                 const res = await fetch('/api/weeklyGoals/addGoal', {
                     method: 'POST',
                     headers: {
@@ -1305,24 +1274,13 @@ async function handleMixedSave(token, cards, weekOf) {
                     body: JSON.stringify(Object.assign({ weekOf: weekOf.toISOString() }, goalData))
                 });
                 const data = await res.json();
-                console.log('Frontend: addGoal response status:', res.status);
-                console.log('Frontend: addGoal response data:', JSON.stringify(data, null, 2));
-                
+
                 if (!res.ok) {
-                    console.error('Frontend: addGoal failed with status:', res.status);
-                    console.error('Frontend: addGoal error data:', data);
                     throw new Error(data.msg || 'Failed to add goal');
                 }
 
-                // Log full response for troubleshooting unexpected API issues
-                console.log('Frontend: Response from addGoal:', data);
-                console.log('Frontend: Response type:', typeof data);
-                console.log('Frontend: Has _id?', !!data._id);
-                console.log('Frontend: Data properties:', Object.keys(data || {}));
-
                 // Ensure the returned object contains an id before updating
                 if (!data || !data._id) {
-                    console.error('Frontend: Invalid goal object received:', data);
                     throw new Error('Server did not return a valid goal object');
                 }
 
